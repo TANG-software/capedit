@@ -1,5 +1,8 @@
 # CapEdit
 
+**Live demo: https://tang-software.github.io/capedit/**
+
+
 A browser video editor with word-level auto captions. Light three-pane workspace,
 full-width timeline, transcript you can edit line by line.
 
