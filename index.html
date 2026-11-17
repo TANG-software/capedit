@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#f3f2f7">
+<meta name="description" content="CapEdit — online video editor">
+<title>CapEdit — video editor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand"><i>C</i><span>CapEdit</span></div>
+    <input class="projname" id="projName" value="Untitled project" spellcheck="false" aria-label="Project name">
+    <div class="spacer"></div>
+    <button class="tb ico" id="btnUndo" title="Undo">↶</button>
+    <button class="tb ico" id="btnRedo" title="Redo">↷</button>
+    <label class="tb" title="Open a saved project">Open<input id="projFile" type="file" accept=".json,application/json" hidden></label>
+    <button class="tb" id="btnSave" title="Save project">Save</button>
+    <button class="tb primary" id="btnExport">Export</button>
+  </header>
+
+  <main class="main">
+
+    <aside class="side left" id="leftPanel">
+      <div class="tabs">
+        <button class="tab on" data-tab="media">Media</button>
+        <button class="tab" data-tab="captions">Captions</button>
+      </div>
+      <div class="panelhost" id="leftHost"></div>
+    </aside>
+
+    <section class="center">
+      <div class="stagewrap" id="stageWrap">
+        <canvas id="stage" width="540" height="960"></canvas>
+        <div class="badge" id="aspectBadge">9:16</div>
+      </div>
+      <div class="transport">
+        <span class="tm"><b id="timeNow">00:00.00</b> / <span id="timeTotal">00:00.00</span></span>
+        <button class="playbtn" id="btnPlay" title="Play">▶</button>
+        <select id="aspectSel" title="Aspect ratio">
+          <option value="9:16">9:16</option>
+          <option value="1:1">1:1</option>
+          <option value="4:5">4:5</option>
+          <option value="3:4">3:4</option>
+          <option value="16:9">16:9</option>
+          <option value="21:9">21:9</option>
+        </select>
+      </div>
+    </section>
+
+    <aside class="side right" id="rightPanel">
+      <div class="tabs">
+        <button class="tab" data-tab="text">Text</button>
+        <button class="tab" data-tab="filters">Filters</button>
+        <button class="tab" data-tab="adjust">Adjust</button>
+        <button class="tab" data-tab="speed">Speed</button>
+        <button class="tab" data-tab="audio">Audio</button>
+      </div>
+      <div class="panelhost" id="rightHost"></div>
+    </aside>
+
+  </main>
+
+  <section class="timeline">
+    <div class="tlbar">
+      <button class="tool" id="btnSplit" title="Split at playhead">Split</button>
+      <button class="tool" id="btnDup" title="Duplicate">Duplicate</button>
+      <button class="tool danger" id="btnDel" title="Delete">Delete</button>
+      <div class="spacer"></div>
+      <button class="tool" id="zoomOut" title="Zoom out">−</button>
+      <button class="tool" id="zoomIn" title="Zoom in">+</button>
+    </div>
+    <div id="tlScroll">
+      <div id="tlRuler"></div>
+      <div id="tlTracks"></div>
+      <div id="playhead"></div>
+    </div>
+  </section>
+
+  <section class="mobiletools">
+    <div class="tabs scroll" id="mobileTabs">
+      <button class="tab on" data-tab="media">Media</button>
+      <button class="tab" data-tab="captions">Captions</button>
+      <button class="tab" data-tab="text">Text</button>
+      <button class="tab" data-tab="filters">Filters</button>
+      <button class="tab" data-tab="adjust">Adjust</button>
+      <button class="tab" data-tab="speed">Speed</button>
+      <button class="tab" data-tab="audio">Audio</button>
+    </div>
+    <div class="panelhost" id="sheetHost"></div>
+  </section>
+
+</div>
+
+<div id="panelBody" class="panelbody"></div>
+<div id="mediaHost"></div>
+<input id="fileInput" type="file" accept="video/*,image/*,audio/*" multiple hidden>
+<div id="toast"></div>
+
+<div id="busyWrap">
+  <div class="expcard">
+    <h3 id="busyTitle">Working…</h3>
+    <div class="expbar"><div id="busyPct"></div></div>
+    <div id="busyNote"></div>
+  </div>
+</div>
+
+<div id="exportWrap">
+  <div class="expcard">
+    <h3>Rendering your video</h3>
+    <div class="expbar"><div id="exportPct"></div></div>
+    <div id="exportNote">Preparing…</div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
