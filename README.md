@@ -1,8 +1,5 @@
 # CapEdit
 
-**Live demo: https://tang-software.github.io/capedit/**
-
-
 A browser video editor with word-level auto captions. Light three-pane workspace,
 full-width timeline, transcript you can edit line by line.
 
@@ -25,7 +22,47 @@ npx serve .        # any static server; file:// will not work for captions
 Captions work without a server (the browser transcribes locally). To exercise the
 cloud path locally, run `netlify dev` or `wrangler pages dev .` with a key set.
 
-## Deploy
+## Deploy on Render
+
+Two ways, same repo.
+
+**A. Web Service (recommended — cloud captions work)**
+
+| Field | Value |
+|---|---|
+| Type | Web Service |
+| Repository | `TANG-software/capedit` |
+| Branch | `main` |
+| Runtime | Node |
+| Region | Singapore (closest to India) |
+| Build Command | `npm install --no-audit --no-fund` |
+| Start Command | `node server.mjs` |
+| Instance Type | Free |
+| Health Check Path | `/` |
+| Environment variable | `GROQ_API_KEY` = your key (Secret) |
+
+`server.mjs` serves the editor and `/api/transcribe` from one process, with no
+dependencies. Add `STT_PROVIDER=groq` only if you set more than one key.
+
+**B. Static Site (no server, captions run in the browser)**
+
+| Field | Value |
+|---|---|
+| Type | Static Site |
+| Repository | `TANG-software/capedit` |
+| Branch | `main` |
+| Build Command | *(leave empty)* |
+| Publish Directory | `.` |
+| Environment variables | none |
+
+Or use the included `render.yaml`: **New + → Blueprint → pick this repo**, and
+Render fills the form in for you.
+
+Note: Render's free instance sleeps after ~15 minutes idle, so the first caption
+after a quiet spell waits ~40 s while it wakes. The static site never sleeps but
+has no server, so captions fall back to the in-browser engine.
+
+## Deploy elsewhere
 
 | Host | Captions | Command |
 |---|---|---|
@@ -67,6 +104,28 @@ fix a misheard word and the word timings for that line are recomputed across its
 original span, so the karaoke highlight keeps up. Click a timestamp to jump there.
 
 ## What is built
+
+**Look and finish** — 24 graded looks with an intensity slider (Warm, Golden hour,
+Sunset, Cool, Teal & orange, Night, B&W, Noir, Mono, Vivid, Punch, Fade, Matte,
+Vintage, Retro, Film, Cinematic, Drama, Dream, Soft, Crisp, Sepia, Neon), plus
+per-clip brightness, contrast, saturation and hue.
+
+**Titles** — 10 title presets (bold white, lower third, caption bar, mint
+highlight, news strap, cinema title, typewriter, neon glow, big impact, minimal)
+and 15 animations (fade, slide up/down/left/right, pop, scale in, rotate in,
+typewriter, word by word, bounce, wave, blur in, glow).
+
+**Compositing** — 9 blend modes and 8 entry transitions (dissolve, wipe right,
+wipe up, slide up, zoom, blur, flash) with a one-tap overlap helper.
+
+**Templates** — 6 one-tap project templates: YouTube video, Instagram Reel,
+Wedding highlight, Product promo, News explainer, Podcast clip. Each sets the
+aspect ratio, a look on every clip, the caption style and a matching title.
+
+**Captions** — 6 caption presets on top of the editable word-level transcript.
+
+**Projects** — saved on the device in IndexedDB, media included, so a project
+reopens intact without re-importing anything.
 
 Multi-track timeline (drag, trim, split, duplicate, snapping, zoom) · video,
 overlay, text and audio tracks · scale/position/rotate/flip · 10 filters plus

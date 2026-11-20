@@ -2,11 +2,15 @@
   "name": "capedit",
   "version": "1.0.0",
   "private": true,
-  "description": "CapEdit — browser video editor with word-level auto captions",
+  "description": "CapEdit \u2014 browser video editor with word-level auto captions",
   "type": "module",
   "scripts": {
-    "dev": "npx serve .",
-    "check": "node --check app.js && node --check shared/transcribe.js"
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "check": "node --check app.js && node --check shared/transcribe.js && node --check server.mjs"
   },
-  "license": "SEE LICENSE IN LICENSE"
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=20"
+  }
 }

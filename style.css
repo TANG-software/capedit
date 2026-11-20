@@ -41,7 +41,8 @@ button{cursor:pointer;border:0;background:none}
 /* -------------------------------------------------------------------- main */
 .main{grid-area:main;display:grid;grid-template-columns:296px minmax(0,1fr) 296px;min-height:0;min-width:0;gap:10px;padding:10px}
 .side{background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:var(--shadow)}
-.side .tabs{display:flex;gap:2px;padding:8px 8px 0;border-bottom:1px solid var(--line2);overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+.side .tabs{display:flex;gap:1px;padding:7px 6px 0;border-bottom:1px solid var(--line2);overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+.side .tab{padding:7px 9px;font-size:12px}
 .side .tabs::-webkit-scrollbar{display:none}
 .panelhost{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 #rightHost:empty::before{content:"Select a clip on the timeline to edit its properties.";display:block;padding:22px 16px;color:var(--muted);font-size:12px;text-align:center;line-height:1.6}
@@ -131,6 +132,18 @@ input[type=color]{width:38px;height:32px;background:#fff;border:1px solid var(--
 .mik{font-size:12px;color:var(--acc)}
 .min{font-size:11px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mid{font-size:9.5px;color:var(--muted)}
+
+/* ------------------------------------------------------- templates + library */
+.tplgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tpl{display:flex;flex-direction:column;gap:4px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:left}
+.tpl:hover{border-color:var(--acc);background:var(--accsoft)}
+.tplprev{font-size:10px;font-weight:800;color:var(--acc);background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.tpl b{font-size:12px;font-weight:700;line-height:1.25}
+.tpl i{font-size:10.5px;color:var(--muted);font-style:normal;line-height:1.35}
+.librow{display:flex;gap:6px;align-items:stretch}
+.librow .capItem{flex:1;min-width:0}
+.libdel{flex:0 0 28px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--muted);font-size:15px;line-height:1}
+.libdel:hover{color:var(--danger);border-color:var(--danger)}
 
 /* -------------------------------------------------------------- transcript */
 .txrow{display:flex;gap:8px;align-items:flex-start;padding:7px;border-radius:9px;border:1px solid transparent}

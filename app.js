@@ -9,18 +9,65 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const ASPECTS = { '9:16': [9, 16], '1:1': [1, 1], '16:9': [16, 9], '4:5': [4, 5], '3:4': [3, 4], '21:9': [21, 9] };
 
-const FILTERS = {
-  none: '',
-  warm: 'sepia(0.28) saturate(1.25) hue-rotate(-8deg)',
-  cool: 'hue-rotate(16deg) saturate(1.12) brightness(1.03)',
-  bw: 'grayscale(1) contrast(1.12)',
-  vivid: 'saturate(1.55) contrast(1.12)',
-  vintage: 'sepia(0.45) contrast(0.95) brightness(1.06)',
-  cinematic: 'contrast(1.22) saturate(0.88) brightness(0.95)',
-  fade: 'saturate(0.75) brightness(1.09) contrast(0.88)',
-  noir: 'grayscale(1) contrast(1.45) brightness(0.9)',
-  dream: 'saturate(1.2) brightness(1.12) blur(0.6px)',
+const LOOKS = {
+  none: { n: 'Original' },
+  warm: { n: 'Warm', b: 1.03, c: 1.05, s: 1.18, h: -6, sep: 0.1 },
+  golden: { n: 'Golden hour', b: 1.07, c: 1.02, s: 1.22, h: -10, sep: 0.18 },
+  sunset: { n: 'Sunset', b: 1.02, c: 1.08, s: 1.3, h: -14, sep: 0.12 },
+  cool: { n: 'Cool', b: 1.03, c: 1.04, s: 1.12, h: 16 },
+  teal: { n: 'Teal & orange', c: 1.16, s: 1.2, h: 8 },
+  night: { n: 'Night', b: 0.86, c: 1.14, s: 1.05, h: 22 },
+  bw: { n: 'B & W', c: 1.12, gray: true },
+  noir: { n: 'Noir', c: 1.45, b: 0.9, gray: true },
+  mono: { n: 'Mono soft', c: 0.95, b: 1.08, gray: true },
+  vivid: { n: 'Vivid', c: 1.12, s: 1.55 },
+  punch: { n: 'Punch', c: 1.22, s: 1.35, b: 1.02 },
+  fade: { n: 'Fade', b: 1.09, c: 0.88, s: 0.78 },
+  matte: { n: 'Matte', b: 1.1, c: 0.82, s: 0.9 },
+  vintage: { n: 'Vintage', b: 1.06, c: 0.95, s: 0.95, sep: 0.45 },
+  retro: { n: 'Retro', b: 1.04, c: 0.98, s: 1.1, sep: 0.3, h: -6 },
+  film: { n: 'Film', c: 1.1, s: 0.92, sep: 0.12 },
+  cinematic: { n: 'Cinematic', b: 0.95, c: 1.22, s: 0.88 },
+  drama: { n: 'Drama', b: 0.92, c: 1.35, s: 1.05 },
+  dream: { n: 'Dream', b: 1.12, s: 1.2, blur: 0.6 },
+  soft: { n: 'Soft', b: 1.06, c: 0.94, s: 1.05 },
+  crisp: { n: 'Crisp', c: 1.18, s: 1.1, b: 1.02 },
+  sepia: { n: 'Sepia', sep: 0.85, c: 1.05 },
+  neon: { n: 'Neon', s: 1.8, c: 1.15, h: -20 },
 };
+
+const FILTERS = LOOKS; // older projects store a key here; the keys still resolve
+
+const BLENDS = ['source-over', 'screen', 'multiply', 'overlay', 'lighten', 'darken', 'color-dodge', 'soft-light', 'difference'];
+
+const TRANSITIONS = {
+  none: 'None',
+  dissolve: 'Dissolve',
+  wipeLeft: 'Wipe →',
+  wipeUp: 'Wipe ↑',
+  slideUp: 'Slide up',
+  zoom: 'Zoom in',
+  blur: 'Blur in',
+  flash: 'Flash',
+};
+
+const TEXT_ANIMS = [
+  ['none', 'None'],
+  ['fade', 'Fade'],
+  ['slideUp', 'Slide up'],
+  ['slideDown', 'Slide down'],
+  ['slideLeft', 'Slide left'],
+  ['slideRight', 'Slide right'],
+  ['pop', 'Pop'],
+  ['scaleIn', 'Scale in'],
+  ['rotateIn', 'Rotate in'],
+  ['type', 'Typewriter'],
+  ['wordIn', 'Word by word'],
+  ['bounce', 'Bounce'],
+  ['wave', 'Wave'],
+  ['blurIn', 'Blur in'],
+  ['glow', 'Glow'],
+];
 
 const FONTS = {
   sans: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
@@ -353,10 +400,49 @@ function layoutStage() {
   canvas.style.height = Math.max(60, Math.floor(ah * s)) + 'px';
 }
 
+function lookStr(clip) {
+  const L = LOOKS[clip.filter] || LOOKS.none;
+  const k = clip.lookIntensity == null ? 1 : clip.lookIntensity;
+  if (!L || L === LOOKS.none || k <= 0) return '';
+  const m = (v) => 1 + ((v == null ? 1 : v) - 1) * k;
+  const out = [`brightness(${m(L.b).toFixed(3)})`, `contrast(${m(L.c).toFixed(3)})`, `saturate(${m(L.s).toFixed(3)})`];
+  if (L.gray) out.push(`grayscale(${k.toFixed(2)})`);
+  if (L.h) out.push(`hue-rotate(${(L.h * k).toFixed(1)}deg)`);
+  if (L.sep) out.push(`sepia(${(L.sep * k).toFixed(2)})`);
+  if (L.blur) out.push(`blur(${(L.blur * k).toFixed(2)}px)`);
+  return out.join(' ');
+}
+
 function filterStr(clip) {
   const a = clip.adj || { b: 1, c: 1, s: 1, h: 0 };
-  const base = FILTERS[clip.filter] || '';
-  return `brightness(${a.b}) contrast(${a.c}) saturate(${a.s}) hue-rotate(${a.h}deg) ${base}`.trim();
+  return `brightness(${a.b}) contrast(${a.c}) saturate(${a.s}) hue-rotate(${a.h}deg) ${lookStr(clip)}`.trim();
+}
+
+/* entry transition: works when the clip overlaps the one before it */
+function transitionState(clip, time, W, H) {
+  const st = { alpha: 1, dx: 0, dy: 0, scale: 1, blur: 0, clipRect: null };
+  const tr = clip.transIn;
+  if (!tr || !tr.type || tr.type === 'none') return st;
+  const d = Math.max(0.08, tr.dur || 0.6);
+  const q = clamp((time - clip.start) / d, 0, 1);
+  if (q >= 1) return st;
+  const e = q * q * (3 - 2 * q);
+  if (tr.type === 'dissolve' || tr.type === 'flash') st.alpha = e;
+  else if (tr.type === 'slideUp') {
+    st.dy = (1 - e) * H;
+    st.alpha = Math.min(1, e * 1.6);
+  } else if (tr.type === 'zoom') {
+    st.scale = 1.25 - 0.25 * e;
+    st.alpha = e;
+  } else if (tr.type === 'blur') {
+    st.blur = (1 - e) * 18;
+    st.alpha = e;
+  } else if (tr.type === 'wipeLeft') {
+    st.clipRect = [0, 0, W * e, H];
+  } else if (tr.type === 'wipeUp') {
+    st.clipRect = [0, H - H * e, W, H * e];
+  }
+  return st;
 }
 
 function clipProgress(clip, time) {
@@ -379,11 +465,20 @@ function drawVisual(clip, time) {
   const sw = clip.kind === 'image' ? el.naturalWidth || 1080 : el.videoWidth || 1080;
   const sh = clip.kind === 'image' ? el.naturalHeight || 1920 : el.videoHeight || 1920;
   if (!sw || !sh) return;
-  const cover = Math.max(W / sw, H / sh) * clip.scale;
+
+  const tr = transitionState(clip, time, W, H);
+  const cover = Math.max(W / sw, H / sh) * clip.scale * tr.scale;
+
   ctx.save();
-  ctx.globalAlpha = clip.opacity * fadeAlpha(clip, time);
-  ctx.filter = filterStr(clip);
-  ctx.translate(W / 2 + clip.x * W, H / 2 + clip.y * H);
+  if (tr.clipRect) {
+    ctx.beginPath();
+    ctx.rect(tr.clipRect[0], tr.clipRect[1], tr.clipRect[2], tr.clipRect[3]);
+    ctx.clip();
+  }
+  ctx.globalAlpha = clip.opacity * fadeAlpha(clip, time) * tr.alpha;
+  ctx.globalCompositeOperation = clip.blend && clip.blend !== 'source-over' ? clip.blend : 'source-over';
+  ctx.filter = tr.blur ? `blur(${tr.blur.toFixed(1)}px) ${filterStr(clip)}` : filterStr(clip);
+  ctx.translate(W / 2 + clip.x * W + tr.dx, H / 2 + clip.y * H + tr.dy);
   if (clip.rotate) ctx.rotate((clip.rotate * Math.PI) / 180);
   if (clip.flipH) ctx.scale(-1, 1);
   try {
@@ -392,6 +487,8 @@ function drawVisual(clip, time) {
     /* element not ready */
   }
   ctx.restore();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.filter = 'none';
 }
 
 function wrapLines(text, maxW) {
@@ -424,29 +521,72 @@ function drawText(clip, time) {
   let dy = 0;
   let sc = 1;
   const anim = txt.anim || 'none';
+  const e = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+  let dx = 0;
+  let rot = 0;
+  let blur = 0;
+  let glow = 0;
+  let str2 = str;
   if (anim === 'fade') alpha *= Math.min(1, p / 0.18, (1 - p) / 0.18);
-  if (anim === 'slideUp') {
-    const k = Math.min(1, p / 0.22);
+  else if (anim === 'slideUp') {
+    const k = e(p / 0.25);
     dy = (1 - k) * 40 * scale;
     alpha *= k;
-  }
-  if (anim === 'pop') {
-    const k = Math.min(1, p / 0.2);
-    sc = 0.7 + 0.3 * (1 - Math.pow(1 - k, 3));
+  } else if (anim === 'slideDown') {
+    const k = e(p / 0.25);
+    dy = -(1 - k) * 40 * scale;
     alpha *= k;
-  }
-  if (anim === 'type') {
+  } else if (anim === 'slideLeft') {
+    const k = e(p / 0.25);
+    dx = (1 - k) * 60 * scale;
+    alpha *= k;
+  } else if (anim === 'slideRight') {
+    const k = e(p / 0.25);
+    dx = -(1 - k) * 60 * scale;
+    alpha *= k;
+  } else if (anim === 'pop') {
+    const k = e(p / 0.2);
+    sc = 0.7 + 0.3 * k;
+    alpha *= k;
+  } else if (anim === 'scaleIn') {
+    const k = e(p / 0.3);
+    sc = 0.2 + 0.8 * k;
+    alpha *= k;
+  } else if (anim === 'rotateIn') {
+    const k = e(p / 0.3);
+    rot = (1 - k) * -18;
+    sc = 0.8 + 0.2 * k;
+    alpha *= k;
+  } else if (anim === 'type') {
     const n = Math.floor(str.length * clamp(p / 0.5, 0, 1));
     if (n <= 0) return;
-    return drawTextString(clip, str.slice(0, n), size, alpha, dy, sc, W, H);
+    str2 = str.slice(0, n);
+  } else if (anim === 'wordIn') {
+    const words = str.split(' ');
+    const n = Math.max(1, Math.ceil(words.length * clamp(p / 0.45, 0, 1)));
+    str2 = words.slice(0, n).join(' ');
+  } else if (anim === 'bounce') {
+    const k = clamp(p / 0.5, 0, 1);
+    dy = -Math.abs(Math.sin(k * Math.PI * 2.2)) * (1 - k) * 34 * scale;
+    alpha *= Math.min(1, k * 2.2);
+  } else if (anim === 'wave') {
+    dy = Math.sin(time * 5.5) * 7 * scale;
+    sc = 1 + Math.sin(time * 5.5) * 0.015;
+  } else if (anim === 'blurIn') {
+    const k = e(p / 0.35);
+    blur = (1 - k) * 14 * scale;
+    alpha *= k;
+  } else if (anim === 'glow') {
+    glow = (0.6 + 0.4 * Math.sin(time * 3.2)) * size * 0.45;
   }
-  drawTextString(clip, str, size, alpha, dy, sc, W, H);
+  drawTextString(clip, str2, size, alpha, dy, sc, W, H, dx, rot, blur, glow);
 }
 
-function drawTextString(clip, str, size, alpha, dy, sc, W, H) {
+function drawTextString(clip, str, size, alpha, dy, sc, W, H, dx, rot, blur, glow) {
   const txt = clip.text;
   ctx.save();
   ctx.globalAlpha = clamp(alpha, 0, 1);
+  if (blur) ctx.filter = `blur(${blur.toFixed(1)}px)`;
   ctx.font = `700 ${size}px ${FONTS[txt.font] || FONTS.sans}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -454,11 +594,15 @@ function drawTextString(clip, str, size, alpha, dy, sc, W, H) {
   const lines = wrapLines(str, maxW);
   const lh = size * 1.22;
   const totalH = lh * lines.length;
-  const cx = W / 2 + clip.x * W;
+  const cx = W / 2 + clip.x * W + (dx || 0);
   const cy = H / 2 + clip.y * H + dy;
   ctx.translate(cx, cy);
-  if (clip.rotate) ctx.rotate((clip.rotate * Math.PI) / 180);
+  if (clip.rotate || rot) ctx.rotate(((clip.rotate + (rot || 0)) * Math.PI) / 180);
   ctx.scale(sc, sc);
+  if (glow) {
+    ctx.shadowColor = txt.color || '#fff';
+    ctx.shadowBlur = glow;
+  }
   if (txt.bg && txt.bg !== 'none') {
     const padX = size * 0.35,
       padY = size * 0.22;
@@ -480,84 +624,7 @@ function drawTextString(clip, str, size, alpha, dy, sc, W, H) {
     ctx.fillText(line, 0, y);
   });
   ctx.restore();
-}
-
-/* ---------------------------------------------------------- caption rendering
-   Word-level ("karaoke") captions: the whole sentence stays on screen and the
-   word being spoken right now is highlighted, like CapCut / Premiere captions. */
-function drawCaptionClip(clip, time) {
-  const W = canvas.width,
-    H = canvas.height;
-  const scale = W / 1080;
-  const txt = clip.text || {};
-  const size = (txt.size || 54) * scale;
-  const words = clip.words || [];
-  if (!words.length) return;
-  const alpha = clip.opacity * fadeAlpha(clip, time);
-  if (alpha <= 0.01) return;
-
-  ctx.save();
-  ctx.globalAlpha = clamp(alpha, 0, 1);
-  ctx.font = `800 ${size}px ${FONTS[txt.font] || FONTS.sans}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-
-  const spaceW = ctx.measureText(' ').width;
-  const maxW = W * 0.88;
-  const lines = [];
-  let cur = { words: [], w: 0 };
-  for (const w of words) {
-    const ww = ctx.measureText(w.w).width;
-    if (cur.words.length && cur.w + ww > maxW) {
-      lines.push(cur);
-      cur = { words: [], w: 0 };
-    }
-    cur.words.push(w);
-    cur.w += ww + spaceW;
-  }
-  if (cur.words.length) lines.push(cur);
-
-  const lh = size * 1.4;
-  const totalH = lh * lines.length;
-  const cx = W / 2 + (clip.x || 0) * W;
-  const top = H / 2 + (clip.y || 0) * H - totalH / 2;
-  const padX = size * 0.3;
-
-  lines.forEach((ln, i) => {
-    const y = top + lh / 2 + i * lh;
-    const x0 = cx - ln.w / 2;
-    if (txt.bg && txt.bg !== 'none') {
-      ctx.save();
-      ctx.fillStyle = txt.bg;
-      roundRect(x0 - padX, y - size * 0.74, ln.w + padX * 2, size * 1.48, size * 0.24);
-      ctx.fill();
-      ctx.restore();
-    }
-    let x = x0;
-    for (const w of ln.words) {
-      const ww = ctx.measureText(w.w).width;
-      const active = time >= w.s - 0.02 && time < w.e + 0.05;
-      if (active) {
-        ctx.save();
-        ctx.fillStyle = txt.hlBg || '#2ee6a8';
-        roundRect(x - size * 0.13, y - size * 0.74, ww + size * 0.26, size * 1.48, size * 0.22);
-        ctx.fill();
-        ctx.restore();
-        ctx.fillStyle = txt.hlColor || '#04120d';
-      } else {
-        ctx.fillStyle = txt.color || '#ffffff';
-        if (txt.stroke) {
-          ctx.lineWidth = Math.max(2, size * 0.1);
-          ctx.strokeStyle = 'rgba(0,0,0,0.62)';
-          ctx.lineJoin = 'round';
-          ctx.strokeText(w.w, x, y);
-        }
-      }
-      ctx.fillText(w.w, x, y);
-      x += ww + spaceW;
-    }
-  });
-  ctx.restore();
+  ctx.filter = 'none';
 }
 
 function roundRect(x, y, w, h, r) {
@@ -1008,66 +1075,64 @@ function splitAtPlayhead() {
 
 const TABS = ['media', 'text', 'captions', 'filters', 'adjust', 'speed', 'audio'];
 
-const LEFT_TABS = ['media', 'captions'];
+const LEFT_TABS = ['media', 'templates', 'captions'];
+let leftTab = 'media';
+let rightTab = 'text';
 
 function isMobileLayout() {
   return window.matchMedia('(max-width: 980px)').matches;
 }
 
-/* One panel, three homes: the left library pane, the right properties pane, or
-   the bottom sheet on a phone. */
 function hostPanel() {
   const body = $('#panelBody');
-  const host = isMobileLayout() ? $('#sheetHost') : LEFT_TABS.indexOf(activeTab) >= 0 ? $('#leftHost') : $('#rightHost');
+  const host = $('#sheetHost');
   if (host && body.parentElement !== host) host.appendChild(body);
-  return host;
 }
 
 function setTab(id) {
+  if (LEFT_TABS.indexOf(id) >= 0) leftTab = id;
+  else rightTab = id;
   activeTab = id;
-  $$('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === id));
-  hostPanel();
+  $$('.tab').forEach((b) => {
+    const isLeft = LEFT_TABS.indexOf(b.dataset.tab) >= 0;
+    b.classList.toggle('on', b.dataset.tab === (isLeft ? leftTab : rightTab));
+  });
   renderPanel();
 }
 
-function slider(label, val, min, max, step, onInput, suffix) {
-  return `<label class="row"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-bind="${label}"><b>${(+val).toFixed(step < 1 ? 2 : 0)}${suffix || ''}</b></label>`;
-}
-
-function bindSliders(root) {
-  $$('input[type=range]', root).forEach((inp) => {
-    const label = inp.dataset.bind;
-    inp.addEventListener('input', () => {
-      const b = inp.parentElement.querySelector('b');
-      if (b) b.textContent = (+inp.value).toFixed(parseFloat(inp.step) < 1 ? 2 : 0) + (inp.dataset.suffix || '');
-      inp.dispatchEvent(new CustomEvent('cap:change', { detail: +inp.value }));
-    });
-    inp.addEventListener('change', () => pushHistory());
-  });
-}
-
-function onRange(inp, fn) {
-  inp.addEventListener('cap:change', (e) => {
-    fn(e.detail);
-    renderFrame(t);
-    updateTimeLabel();
-  });
+function panelHTML(tab, c) {
+  if (tab === 'media') return mediaPanel();
+  if (tab === 'templates') return templatesPanel();
+  if (tab === 'captions') return captionsPanel();
+  if (tab === 'text') return textPanel(c);
+  if (tab === 'filters') return filtersPanel(c);
+  if (tab === 'adjust') return adjustPanel(c);
+  if (tab === 'speed') return speedPanel(c);
+  if (tab === 'audio') return audioPanel(c);
+  return '';
 }
 
 function renderPanel() {
-  const p = $('#panelBody');
   const c = getClip(selectedId);
-  let html = '';
-  if (activeTab === 'media') html = mediaPanel();
-  else if (activeTab === 'text') html = textPanel(c);
-  else if (activeTab === 'captions') html = captionsPanel();
-  else if (activeTab === 'filters') html = filtersPanel(c);
-  else if (activeTab === 'adjust') html = adjustPanel(c);
-  else if (activeTab === 'speed') html = speedPanel(c);
-  else if (activeTab === 'audio') html = audioPanel(c);
-  p.innerHTML = html;
-  attachRanges(p);
-  p.scrollTop = 0;
+  if (isMobileLayout()) {
+    const body = $('#panelBody');
+    hostPanel();
+    body.innerHTML = panelHTML(activeTab, c);
+    attachRanges(body);
+    body.scrollTop = 0;
+    layoutStage();
+    return;
+  }
+  const L = $('#leftBody');
+  const R = $('#rightBody');
+  if (L) {
+    L.innerHTML = panelHTML(leftTab, c);
+    attachRanges(L);
+  }
+  if (R) {
+    R.innerHTML = panelHTML(rightTab, c);
+    attachRanges(R);
+  }
   layoutStage();
 }
 
@@ -1087,6 +1152,15 @@ function attachRanges(root) {
   $$('input[type=color]', root).forEach((inp) => inp.addEventListener('change', () => pushHistory()));
 }
 
+function onRange(inp, fn) {
+  if (!inp) return;
+  inp.addEventListener('cap:change', (e) => {
+    fn(e.detail);
+    renderFrame(t);
+    updateTimeLabel();
+  });
+}
+
 function noSel(msg) {
   return `<div class="empty">${msg}</div>`;
 }
@@ -1103,6 +1177,21 @@ function mediaPanel() {
     .join('');
   setTimeout(() => {
     if (!$('#btnImport')) return;
+    const ls = $('#libSave');
+    if (ls) ls.addEventListener('click', () => saveToLibrary());
+    LIB.all()
+      .then((recs) => {
+        const box = $('#libList');
+        if (box) box.innerHTML = libraryListHTML(recs);
+        $$('[data-open]').forEach((b) => b.addEventListener('click', () => loadFromLibrary(b.dataset.open)));
+        $$('[data-del]').forEach((b) =>
+          b.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            deleteFromLibrary(b.dataset.del);
+          })
+        );
+      })
+      .catch(() => {});
     $$('.mi').forEach((b) =>
       b.addEventListener('click', () => {
         addClipFromMedia(b.dataset.mid);
@@ -1116,7 +1205,9 @@ function mediaPanel() {
       <button class="btn primary" id="btnImport">+ Import media</button>
       <button class="btn" id="btnVoice">Voiceover</button>
     </div>
-    ${items ? `<div class="grid">${items}</div>` : '<div class="empty">No media yet.<br>Import video, photos or music.</div>'}`;
+    ${items ? `<div class="grid">${items}</div>` : '<div class="empty">No media yet.<br>Import video, photos or music.</div>'}
+    <div class="btnrow"><button class="btn" id="libSave">Save project on this device</button></div>
+    <div id="libList"></div>`;
 }
 
 function textPanel(c) {
@@ -1146,6 +1237,17 @@ function textPanel(c) {
       b.addEventListener('click', () => {
         txt.anim = b.dataset.anim;
         renderPanel();
+        pushHistory();
+      })
+    );
+    $$('[data-tpreset]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const p = TITLE_PRESETS[+b.dataset.tpreset];
+        if (!p) return;
+        Object.assign(txt, p.t);
+        c.y = p.y;
+        renderPanel();
+        renderFrame(t);
         pushHistory();
       })
     );
@@ -1208,35 +1310,10 @@ function textPanel(c) {
   ]
     .map(([v, n]) => `<button class="chip" data-pos="${v}">${n}</button>`)
     .join('')}</div>
+  <div class="lbl">Title presets</div>
+  <div class="chips">${TITLE_PRESETS.map((p, i) => `<button class="chip" data-tpreset="${i}">${p.n}</button>`).join('')}</div>
   <div class="lbl">Animation</div>
-  <div class="chips">${[
-    ['none', 'None'],
-    ['fade', 'Fade'],
-    ['slideUp', 'Slide up'],
-    ['pop', 'Pop'],
-    ['type', 'Typewriter'],
-  ]
-    .map(([v, n]) => `<button class="chip ${txt.anim === v ? 'on' : ''}" data-anim="${v}">${n}</button>`)
-    .join('')}</div>`;
-}
-
-/* Re-time a caption line after the user fixes a misheard word: the new words
-   are spread evenly across the line's original span. */
-function retimeCaptionLine(c, newText) {
-  const parts = String(newText).trim().split(/\s+/).filter(Boolean);
-  const old = c.words || [];
-  const t0 = old.length ? old[0].s : c.start;
-  let t1 = old.length ? old[old.length - 1].e : c.start + c.dur;
-  if (!(t1 > t0)) t1 = t0 + Math.max(0.5, c.dur);
-  if (!parts.length) {
-    c.words = [];
-    c.text.str = '';
-    return;
-  }
-  const step = Math.max(0.08, (t1 - t0) / parts.length);
-  c.words = parts.map((w, i) => ({ w, s: t0 + i * step, e: t0 + (i + 1) * step }));
-  c.text.str = parts.join(' ');
-  c.dur = Math.max(0.45, t0 + parts.length * step - c.start);
+  <div class="chips wide">${TEXT_ANIMS.map(([v, n]) => `<button class="chip ${txt.anim === v ? 'on' : ''}" data-anim="${v}">${n}</button>`).join('')}</div>`;
 }
 
 function captionsPanel() {
@@ -1292,6 +1369,16 @@ function captionsPanel() {
           selectClip(c.id);
           seek(c.start + 0.02);
         }
+      })
+    );
+    $$('[data-cpreset]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const p = CAPTION_PRESETS[+b.dataset.cpreset];
+        if (!p) return;
+        state.clips.filter((c) => c.caption).forEach((c) => Object.assign(c.text, p.t));
+        renderPanel();
+        renderFrame(t);
+        pushHistory();
       })
     );
     const sz = $('#capSize');
@@ -1354,6 +1441,8 @@ function captionsPanel() {
     </div>`
     )
     .join('')}</div>
+  <div class="lbl">Caption presets</div>
+  <div class="chips">${CAPTION_PRESETS.map((p, i) => `<button class="chip" data-cpreset="${i}">${p.n}</button>`).join('')}</div>
   <div class="lbl">Caption style</div>
   <label class="row"><span>Size</span><input id="capSize" type="range" min="28" max="110" step="1" value="${(anyCap.text && anyCap.text.size) || 54}" data-bind="size"><b>${(anyCap.text && anyCap.text.size) || 54}</b></label>
   <div class="row2"><span class="hint">Highlight</span><input type="color" id="capHl" value="${(anyCap.text && anyCap.text.hlBg) || '#2ee6a8'}">
@@ -1409,28 +1498,65 @@ function exportSRT() {
   download(new Blob([body], { type: 'text/plain' }), 'captions.srt');
 }
 
+const TITLE_PRESETS = [
+  { n: 'Bold white', t: { size: 84, color: '#ffffff', font: 'sans', bg: 'none', stroke: true, anim: 'pop' }, y: 0 },
+  { n: 'Lower third', t: { size: 44, color: '#ffffff', font: 'sans', bg: 'rgba(0,0,0,0.62)', stroke: false, anim: 'slideLeft' }, y: 0.3 },
+  { n: 'Caption bar', t: { size: 52, color: '#ffffff', font: 'sans', bg: 'rgba(0,0,0,0.55)', stroke: false, anim: 'fade' }, y: 0.32 },
+  { n: 'Mint highlight', t: { size: 64, color: '#04120d', font: 'sans', bg: '#2ee6a8', stroke: false, anim: 'scaleIn' }, y: 0.28 },
+  { n: 'News strap', t: { size: 40, color: '#ffffff', font: 'impact', bg: '#e5484d', stroke: false, anim: 'slideUp' }, y: 0.33 },
+  { n: 'Cinema title', t: { size: 92, color: '#ffffff', font: 'serif', bg: 'none', stroke: true, anim: 'blurIn' }, y: -0.22 },
+  { n: 'Typewriter', t: { size: 58, color: '#ffffff', font: 'mono', bg: 'rgba(0,0,0,0.5)', stroke: false, anim: 'type' }, y: 0.3 },
+  { n: 'Neon glow', t: { size: 76, color: '#7cf7d0', font: 'sans', bg: 'none', stroke: false, anim: 'glow' }, y: 0 },
+  { n: 'Big impact', t: { size: 110, color: '#ffffff', font: 'impact', bg: 'none', stroke: true, anim: 'bounce' }, y: 0 },
+  { n: 'Minimal', t: { size: 40, color: '#ffffff', font: 'sans', bg: 'none', stroke: false, anim: 'fade' }, y: -0.34 },
+];
+
+const CAPTION_PRESETS = [
+  { n: 'Clean', t: { size: 54, color: '#ffffff', bg: 'rgba(0,0,0,0.45)', hlBg: '#2ee6a8', font: 'sans' } },
+  { n: 'Boxed', t: { size: 50, color: '#ffffff', bg: 'rgba(0,0,0,0.78)', hlBg: '#ffd166', font: 'sans' } },
+  { n: 'Karaoke', t: { size: 60, color: '#ffffff', bg: 'none', hlBg: '#6b4eff', font: 'sans' } },
+  { n: 'Bold yellow', t: { size: 58, color: '#ffffff', bg: 'none', hlBg: '#ffd400', font: 'impact' } },
+  { n: 'Light', t: { size: 48, color: '#1f1d2b', bg: 'rgba(255,255,255,0.88)', hlBg: '#6b4eff', font: 'sans' } },
+  { n: 'Subtle', t: { size: 44, color: '#ffffff', bg: 'none', hlBg: '#2ee6a8', font: 'serif' } },
+];
+
 function filtersPanel(c) {
-  if (!c || c.kind === 'audio') return noSel('Select a video, photo or text clip to apply a filter.');
+  if (!c || c.kind === 'audio') return noSel('Select a video, photo or text clip to apply a look.');
   setTimeout(() => {
-    if (!$('[data-fil]')) return;
-    $$('[data-fil]').forEach((b) =>
+    if (!$('[data-look]')) return;
+    $$('[data-look]').forEach((b) =>
       b.addEventListener('click', () => {
-        c.filter = b.dataset.fil;
+        c.filter = b.dataset.look;
+        if (c.lookIntensity == null) c.lookIntensity = 1;
         renderPanel();
         renderFrame(t);
         pushHistory();
       })
     );
+    const li = $('#lookInt');
+    if (li) onRange(li, (v) => (c.lookIntensity = v));
+    const all = $('#lookAll');
+    if (all)
+      all.addEventListener('click', () => {
+        state.clips.filter((x) => x.kind === 'video' || x.kind === 'image').forEach((x) => {
+          x.filter = c.filter;
+          x.lookIntensity = c.lookIntensity == null ? 1 : c.lookIntensity;
+        });
+        pushHistory();
+        renderFrame(t);
+        toast('Look applied to every clip');
+      });
   });
-  const names = { none: 'Original', warm: 'Warm', cool: 'Cool', bw: 'B&W', vivid: 'Vivid', vintage: 'Vintage', cinematic: 'Cinema', fade: 'Fade', noir: 'Noir', dream: 'Dream' };
-  return `<div class="chips wide">${Object.keys(FILTERS)
-    .map((k) => `<button class="chip ${c.filter === k ? 'on' : ''}" data-fil="${k}">${names[k]}</button>`)
+  return `<div class="chips wide">${Object.keys(LOOKS)
+    .map((k) => `<button class="chip ${c.filter === k ? 'on' : ''}" data-look="${k}">${LOOKS[k].n}</button>`)
     .join('')}</div>
-    <div class="lbl">Strength is adjustable in Adjust.</div>`;
+  <label class="row"><span>Intensity</span><input id="lookInt" type="range" min="0" max="1" step="0.05" value="${c.lookIntensity == null ? 1 : c.lookIntensity}" data-bind="int"><b>${Math.round((c.lookIntensity == null ? 1 : c.lookIntensity) * 100)}%</b></label>
+  <div class="btnrow"><button class="btn" id="lookAll">Apply this look to all clips</button></div>`;
 }
 
 function adjustPanel(c) {
-  if (!c) return noSel('Select a clip to adjust brightness, contrast, colour and framing.');
+  if (!c) return noSel('Select a clip to adjust colour, framing, blending and transitions.');
+  const isVisual = c.kind !== 'audio';
   setTimeout(() => {
     if (!$('#adjB')) return;
     const map = { Bright: 'b', Contrast: 'c', Saturation: 's', Hue: 'h' };
@@ -1439,29 +1565,40 @@ function adjustPanel(c) {
       if (!key) return;
       onRange(inp, (v) => (c.adj[key] = v));
     });
-    const sc = $('#adjScale'),
-      rx = $('#adjX'),
-      ry = $('#adjY'),
-      rt = $('#adjRot');
-    onRange(sc, (v) => (c.scale = v));
-    onRange(rx, (v) => (c.x = v));
-    onRange(ry, (v) => (c.y = v));
-    onRange(rt, (v) => (c.rotate = v));
-    $('#adjFlip').addEventListener('click', () => {
-      c.flipH = !c.flipH;
-      renderFrame(t);
-      pushHistory();
-    });
+    onRange($('#adjScale'), (v) => (c.scale = v));
+    onRange($('#adjX'), (v) => (c.x = v));
+    onRange($('#adjY'), (v) => (c.y = v));
+    onRange($('#adjRot'), (v) => (c.rotate = v));
+    onRange($('#adjOp'), (v) => (c.opacity = v));
+    const bl = $('#adjBlend');
+    if (bl) bl.addEventListener('change', () => { c.blend = bl.value; renderFrame(t); pushHistory(); });
+    const tr = $('#adjTrans');
+    if (tr)
+      tr.addEventListener('change', () => {
+        c.transIn = { type: tr.value, dur: (c.transIn && c.transIn.dur) || 0.6 };
+        renderPanel();
+        renderFrame(t);
+        pushHistory();
+      });
+    const td = $('#adjTransDur');
+    if (td) onRange(td, (v) => { c.transIn = { type: (c.transIn && c.transIn.type) || 'dissolve', dur: v }; renderFrame(t); });
+    const ov = $('#adjOverlap');
+    if (ov)
+      ov.addEventListener('click', () => {
+        const dur = (c.transIn && c.transIn.dur) || 0.6;
+        const prev = clipsOn(c.trackId).filter((x) => x.id !== c.id && x.start < c.start).pop();
+        if (!prev) return toast('No clip before this one on the track');
+        if (!c.transIn || c.transIn.type === 'none') c.transIn = { type: 'dissolve', dur };
+        c.start = Math.max(prev.start + 0.1, c.start - dur);
+        pushHistory();
+        renderAll();
+        toast('Overlapped with the previous clip');
+      });
+    $('#adjFlip').addEventListener('click', () => { c.flipH = !c.flipH; renderFrame(t); pushHistory(); });
     $('#adjReset').addEventListener('click', () => {
       c.adj = { b: 1, c: 1, s: 1, h: 0 };
-      c.scale = 1;
-      c.x = 0;
-      c.y = 0;
-      c.rotate = 0;
-      c.flipH = false;
-      renderPanel();
-      renderFrame(t);
-      pushHistory();
+      c.scale = 1; c.x = 0; c.y = 0; c.rotate = 0; c.flipH = false; c.opacity = 1;
+      renderPanel(); renderFrame(t); pushHistory();
     });
   });
   const a = c.adj;
@@ -1470,11 +1607,21 @@ function adjustPanel(c) {
   <label class="row"><span>Contrast</span><input id="adjC" type="range" min="0.4" max="1.8" step="0.01" value="${a.c}" data-bind="Contrast"><b>${a.c.toFixed(2)}</b></label>
   <label class="row"><span>Saturation</span><input id="adjS" type="range" min="0" max="2" step="0.01" value="${a.s}" data-bind="Saturation"><b>${a.s.toFixed(2)}</b></label>
   <label class="row"><span>Hue</span><input id="adjH" type="range" min="-180" max="180" step="1" value="${a.h}" data-bind="Hue"><b>${a.h}</b></label>
+  ${isVisual ? `
+  <div class="lbl">Framing</div>
   <label class="row"><span>Scale</span><input id="adjScale" type="range" min="0.2" max="3" step="0.01" value="${c.scale}" data-bind="scale"><b>${c.scale.toFixed(2)}</b></label>
   <label class="row"><span>X</span><input id="adjX" type="range" min="-0.5" max="0.5" step="0.01" value="${c.x}" data-bind="x"><b>${c.x.toFixed(2)}</b></label>
   <label class="row"><span>Y</span><input id="adjY" type="range" min="-0.5" max="0.5" step="0.01" value="${c.y}" data-bind="y"><b>${c.y.toFixed(2)}</b></label>
   <label class="row"><span>Rotate</span><input id="adjRot" type="range" min="-180" max="180" step="1" value="${c.rotate}" data-bind="rot"><b>${c.rotate}</b></label>
-  <div class="btnrow"><button class="btn" id="adjFlip">Flip horizontal</button><button class="btn" id="adjReset">Reset</button></div>`;
+  <label class="row"><span>Opacity</span><input id="adjOp" type="range" min="0" max="1" step="0.01" value="${c.opacity}" data-bind="op"><b>${Math.round(c.opacity * 100)}%</b></label>
+  <div class="lbl">Blend mode</div>
+  <select id="adjBlend" class="sel">${BLENDS.map((b) => `<option value="${b}" ${(c.blend || 'source-over') === b ? 'selected' : ''}>${b}</option>`).join('')}</select>
+  <div class="lbl">Transition in</div>
+  <select id="adjTrans" class="sel">${Object.keys(TRANSITIONS).map((k) => `<option value="${k}" ${((c.transIn && c.transIn.type) || 'none') === k ? 'selected' : ''}>${TRANSITIONS[k]}</option>`).join('')}</select>
+  <label class="row"><span>Length</span><input id="adjTransDur" type="range" min="0.2" max="2" step="0.05" value="${(c.transIn && c.transIn.dur) || 0.6}" data-bind="tdur"><b>${((c.transIn && c.transIn.dur) || 0.6).toFixed(2)}s</b></label>
+  <div class="btnrow"><button class="btn" id="adjOverlap">Overlap previous clip</button><button class="btn" id="adjFlip">Flip</button></div>
+  ` : ''}
+  <div class="btnrow"><button class="btn" id="adjReset">Reset adjustments</button></div>`;
 }
 
 function speedPanel(c) {
@@ -1547,6 +1694,181 @@ function audioPanel(c) {
     ${cleaned ? '<button class="btn" id="nrUndo">Undo</button>' : ''}
   </div>
   <p class="hint">Spectral noise removal: it learns the hiss/room tone of this clip and subtracts it, then writes a cleaned audio track that plays (and exports) with the video. Strength 0.8 is a good start; raise it for a noisy market, lower it if voices sound thin.</p>`;
+}
+
+/* ------------------------------------------------------------- templates */
+
+const TEMPLATES = [
+  { id: 'yt', n: 'YouTube video', d: '16:9 · crisp look · bold title', aspect: '16:9', look: 'crisp', title: 0, cap: 0 },
+  { id: 'reel', n: 'Instagram Reel', d: '9:16 · vivid · karaoke captions', aspect: '9:16', look: 'vivid', title: 0, cap: 2 },
+  { id: 'wedding', n: 'Wedding highlight', d: '16:9 · golden · soft titles', aspect: '16:9', look: 'golden', title: 5, cap: 5 },
+  { id: 'promo', n: 'Product promo', d: '1:1 · punchy · mint highlight', aspect: '1:1', look: 'punch', title: 3, cap: 1 },
+  { id: 'news', n: 'News explainer', d: '16:9 · cinematic · red strap', aspect: '16:9', look: 'cinematic', title: 4, cap: 1 },
+  { id: 'podcast', n: 'Podcast clip', d: '9:16 · film · boxed captions', aspect: '9:16', look: 'film', title: 1, cap: 2 },
+];
+
+function applyTemplate(id) {
+  const tp = TEMPLATES.find((x) => x.id === id);
+  if (!tp) return;
+  state.aspect = tp.aspect;
+  if ($('#aspectSel')) $('#aspectSel').value = tp.aspect;
+  if ($('#aspectBadge')) $('#aspectBadge').textContent = tp.aspect;
+  state.clips
+    .filter((c) => c.kind === 'video' || c.kind === 'image')
+    .forEach((c) => {
+      c.filter = tp.look;
+      c.lookIntensity = 1;
+    });
+  const cp = CAPTION_PRESETS[tp.cap];
+  if (cp) state.clips.filter((c) => c.caption).forEach((c) => Object.assign(c.text, cp.t));
+  const t = TITLE_PRESETS[tp.title];
+  const tc = addTextClip(tp.n);
+  if (t) {
+    Object.assign(tc.text, t.t);
+    tc.y = t.y;
+  }
+  resizeCanvas();
+  pushHistory();
+  renderAll();
+  toast(tp.n + ' applied');
+}
+
+function templatesPanel() {
+  setTimeout(() => {
+    if (!$('[data-tpl]')) return;
+    $$('[data-tpl]').forEach((b) => b.addEventListener('click', () => applyTemplate(b.dataset.tpl)));
+  });
+  return `<p class="hint">One tap sets the aspect ratio, a look on every clip, the caption style and a matching title.</p>
+  <div class="tplgrid">${TEMPLATES.map(
+    (tp) => `<button class="tpl" data-tpl="${tp.id}">
+      <span class="tplprev">${tp.aspect}</span>
+      <b>${tp.n}</b>
+      <i>${tp.d}</i>
+    </button>`
+  ).join('')}</div>`;
+}
+
+/* ------------------------------------------------------- local project library
+   Free tier keeps projects (and their media) in this browser's IndexedDB. */
+
+const LIB = {
+  db: null,
+  async open() {
+    if (this.db) return this.db;
+    this.db = await new Promise((res, rej) => {
+      const r = indexedDB.open('capedit', 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        if (!d.objectStoreNames.contains('projects')) d.createObjectStore('projects', { keyPath: 'id' });
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    return this.db;
+  },
+  async store(mode) {
+    const db = await this.open();
+    return db.transaction('projects', mode).objectStore('projects');
+  },
+  async put(rec) {
+    const s = await this.store('readwrite');
+    return new Promise((res, rej) => {
+      const q = s.put(rec);
+      q.onsuccess = () => res(rec.id);
+      q.onerror = () => rej(q.error);
+    });
+  },
+  async all() {
+    const s = await this.store('readonly');
+    return new Promise((res, rej) => {
+      const q = s.getAll();
+      q.onsuccess = () => res(q.result || []);
+      q.onerror = () => rej(q.error);
+    });
+  },
+  async del(id) {
+    const s = await this.store('readwrite');
+    return new Promise((res) => {
+      const q = s.delete(id);
+      q.onsuccess = () => res(true);
+      q.onerror = () => res(false);
+    });
+  },
+};
+
+function projectJSON() {
+  return JSON.stringify(
+    { aspect: state.aspect, clips: state.clips, tracks: state.tracks, name: state.name },
+    (k, v) => (k === '_el' || k === '_nodes' || k === '_cleanEl' ? undefined : v)
+  );
+}
+
+async function saveToLibrary() {
+  try {
+    const id = state.projectId || (state.projectId = uid());
+    const mediaRecs = Object.values(media)
+      .filter((m) => m.blob)
+      .map((m) => ({ id: m.id, kind: m.kind, name: m.name, type: m.blob.type, duration: m.duration, w: m.w, h: m.h, blob: m.blob }));
+    await LIB.put({ id, name: state.name, updated: Date.now(), json: projectJSON(), media: mediaRecs });
+    toast('Saved on this device');
+    renderPanel();
+  } catch (e) {
+    toast('Could not save: ' + (e && e.message ? e.message : e));
+  }
+}
+
+async function loadFromLibrary(id) {
+  try {
+    const recs = await LIB.all();
+    const rec = recs.find((r) => r.id === id);
+    if (!rec) return;
+    for (const m of Object.values(media)) {
+      try {
+        URL.revokeObjectURL(m.url);
+      } catch (e) {}
+    }
+    Object.keys(media).forEach((k) => delete media[k]);
+    for (const r of rec.media || []) {
+      media[r.id] = { id: r.id, kind: r.kind, name: r.name, url: URL.createObjectURL(r.blob), blob: r.blob, duration: r.duration, w: r.w, h: r.h };
+    }
+    const s = JSON.parse(rec.json);
+    state.aspect = s.aspect;
+    state.tracks = s.tracks;
+    state.clips = s.clips;
+    state.name = rec.name;
+    state.projectId = rec.id;
+    selectedId = null;
+    if ($('#aspectSel')) $('#aspectSel').value = state.aspect;
+    if ($('#aspectBadge')) $('#aspectBadge').textContent = state.aspect;
+    if ($('#projName')) $('#projName').value = state.name;
+  $$('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === (LEFT_TABS.indexOf(b.dataset.tab) >= 0 ? leftTab : rightTab)));
+    resizeCanvas();
+    renderAll();
+    pushHistory();
+    toast('Opened "' + rec.name + '"');
+  } catch (e) {
+    toast('Could not open that project');
+  }
+}
+
+async function deleteFromLibrary(id) {
+  await LIB.del(id);
+  renderPanel();
+  toast('Project deleted');
+}
+
+function libraryListHTML(recs) {
+  if (!recs.length) return '';
+  return `<div class="lbl">Saved on this device</div>
+  <div class="caplist">${recs
+    .sort((x, y) => y.updated - x.updated)
+    .map(
+      (r) => `<div class="librow">
+      <button class="capItem" data-open="${r.id}"><b>${new Date(r.updated).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</b> ${escapeHtml(r.name)}</button>
+      <button class="libdel" data-del="${r.id}" title="Delete">×</button>
+    </div>`
+    )
+    .join('')}</div>`;
 }
 
 /* --------------------------------------------------------------- busy overlay */
@@ -2528,7 +2850,8 @@ function wire() {
 
   window.addEventListener('resize', () => {
     layoutStage();
-    hostPanel();
+    if (isMobileLayout()) hostPanel();
+    renderPanel();
   });
   window.addEventListener('orientationchange', () => setTimeout(layoutStage, 120));
   watchStage();
@@ -2594,11 +2917,12 @@ async function recordVoiceover() {
 
 function boot() {
   AI.load();
-  hostPanel();
+  if (isMobileLayout()) hostPanel();
   resizeCanvas();
   wire();
   renderAll();
   if ($('#projName')) $('#projName').value = state.name;
+  $$('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === (LEFT_TABS.indexOf(b.dataset.tab) >= 0 ? leftTab : rightTab)));
   curSnap = snapshot();
   requestAnimationFrame(loop);
   if (!window.MediaRecorder) toast('Recording needs Chrome or Firefox');

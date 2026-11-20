@@ -1,0 +1,22 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+# Deploy: New + > Blueprint > pick this repo. Render creates the service below.
+services:
+  - type: web
+    name: capedit
+    runtime: node
+    plan: free
+    region: singapore          # closest to India; also: oregon, frankfurt, ohio
+    branch: main
+    buildCommand: npm install --no-audit --no-fund
+    startCommand: node server.mjs
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # set the real value in the Render dashboard (it will prompt for it)
+      - key: GROQ_API_KEY
+        sync: false
+      # optional: force a provider when more than one key is present
+      - key: STT_PROVIDER
+        value: groq
