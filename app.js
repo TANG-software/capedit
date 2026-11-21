@@ -1669,7 +1669,19 @@ function audioPanel(c) {
       const mode = $('#nrMode') ? $('#nrMode').value : 'fast';
       pause();
       try {
-        if (mode === 'studio') {
+        if (mode === 'voice') {
+          showBusy('Voice AI', 'cleaning the voice on this device');
+          startCrawl(90);
+          const clean = await rnnoiseDenoise(c, (n) => setBusy(null, n));
+          stopCrawl();
+          setBusy(100, 'done');
+          installCleanAudio(c, clean, 48000);
+          hideBusy();
+          pushHistory();
+          renderPanel();
+          renderAll();
+          toast('Voice AI applied');
+        } else if (mode === 'studio') {
           showBusy('Studio noise removal', 'separating the voice from the background');
           startCrawl(92);
           const clean = await denoiseStudio(c, strength, (p, el) => setBusy(Math.round((p || 0) * 100), 'working\u2026 ' + (el ? el + 's' : '')));
@@ -1717,6 +1729,7 @@ function audioPanel(c) {
   <label class="row"><span>Strength</span><input id="nrStr" type="range" min="0.3" max="1" step="0.05" value="0.8" data-bind="str"><b>0.80</b></label>
   <select id="nrMode" class="sel">
     <option value="fast">Fast \u2014 on this device</option>
+    <option value="voice">Voice AI \u2014 on this device</option>
     <option value="studio">Studio \u2014 AI model</option>
   </select>
   <div class="btnrow">
@@ -2000,9 +2013,9 @@ async function ensureASR(onProgress) {
   }
 }
 
-function resampleTo16k(input, from) {
-  if (!from || Math.abs(from - 16000) < 1) return input;
-  const ratio = from / 16000;
+function resampleTo(input, from, to) {
+  if (!from || !to || Math.abs(from - to) < 1) return input;
+  const ratio = from / to;
   const n = Math.max(1, Math.floor(input.length / ratio));
   const out = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -2013,6 +2026,10 @@ function resampleTo16k(input, from) {
     out[i] = input[i0] * (1 - f) + input[i1] * f;
   }
   return out;
+}
+
+function resampleTo16k(input, from) {
+  return resampleTo(input, from, 16000);
 }
 
 function rmsOf(f) {
@@ -2339,6 +2356,95 @@ async function denoiseClip(clip, strength, onNote) {
   const after = rmsOf(clean);
   installCleanAudio(clip, clean);
   return { before, after };
+}
+
+/* ---------------------------------------------------- on-device voice AI
+   RNNoise (the model Jitsi Meet uses) compiled to WebAssembly: 112 KB, runs
+   frame by frame on the CPU, no server and no network. 48 kHz mono, 480-sample
+   frames, which is what the model expects. */
+
+let RNNOISE = null;
+
+async function ensureRNNoise() {
+  if (RNNOISE) return RNNOISE;
+  let mod;
+  try {
+    mod = await import('./rnnoise-sync.js');
+  } catch (e) {
+    throw new Error('Voice AI needs the full site — it loads a separate module');
+  }
+  const factory = mod.default || mod;
+  RNNOISE = await factory();
+  return RNNOISE;
+}
+
+async function audio48kFromClip(clip, onNote) {
+  const m = media[clip.mediaId];
+  if (!m || !m.blob) throw new Error('that clip has no media');
+  const AC = window.AudioContext || window.webkitAudioContext;
+  let actx;
+  try {
+    actx = new AC({ sampleRate: 48000 });
+  } catch (e) {
+    actx = new AC();
+  }
+  let buf;
+  try {
+    const raw = await m.blob.arrayBuffer();
+    buf = await new Promise((res, rej) => {
+      const p = actx.decodeAudioData(raw.slice(0), res, rej);
+      if (p && p.then) p.then(res).catch(rej);
+    });
+  } finally {
+    try {
+      actx.close();
+    } catch (e) {}
+  }
+  const sr = buf.sampleRate;
+  const startS = Math.max(0, clip.inPoint);
+  const endS = Math.min(buf.duration, startS + clip.dur * clip.speed);
+  const i0 = Math.max(0, Math.floor(startS * sr));
+  const i1 = Math.max(i0 + 1, Math.min(buf.length, Math.floor(endS * sr)));
+  const n = i1 - i0;
+  const mono = new Float32Array(n);
+  const chs = buf.numberOfChannels;
+  for (let c = 0; c < chs; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < n; i++) mono[i] += d[i0 + i] / chs;
+  }
+  if (rmsOf(mono) < 2e-4) throw new Error('NO_AUDIO');
+  return resampleTo(mono, sr, 48000);
+}
+
+async function rnnoiseDenoise(clip, onNote) {
+  if (onNote) onNote('reading the audio track…');
+  const audio = await audio48kFromClip(clip, onNote);
+  if (onNote) onNote('loading the voice model…');
+  const M = await ensureRNNoise();
+  const FRAME = 480;
+  const st = M._rnnoise_create(0);
+  if (!st) throw new Error('could not start the model');
+  const inPtr = M._malloc(FRAME * 4);
+  const outPtr = M._malloc(FRAME * 4);
+  const out = new Float32Array(audio.length);
+  try {
+    for (let i = 0; i < audio.length; i += FRAME) {
+      const n = Math.min(FRAME, audio.length - i);
+      // RNNoise works on int16-range samples, not ±1.0 floats
+      const inF = M.HEAPF32.subarray(inPtr >> 2, (inPtr >> 2) + FRAME);
+      inF.fill(0);
+      for (let k = 0; k < n; k++) inF[k] = audio[i + k] * 32768;
+      M._rnnoise_process_frame(st, outPtr, inPtr);
+      const res = M.HEAPF32.subarray(outPtr >> 2, (outPtr >> 2) + n);
+      for (let k = 0; k < n; k++) out[i + k] = Math.max(-1, Math.min(1, res[k] / 32768));
+      if (onNote && (i / FRAME) % 200 === 0) onNote('cleaning ' + Math.round((i / audio.length) * 100) + '%');
+    }
+  } finally {
+    M._rnnoise_destroy(st);
+    M._free(inPtr);
+    M._free(outPtr);
+  }
+  return out;
 }
 
 /* ------------------------------------------------------- studio noise removal

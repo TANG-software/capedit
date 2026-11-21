@@ -111,7 +111,14 @@ Two modes, in the Audio panel of any video or audio clip.
 over time, spectral subtraction with a residual floor, inverse STFT. Under a
 second for a minute of audio, no network, no model.
 
-**Studio** sends the clip's audio to `denoise/denoise_api.py`, a FastAPI service
+**Voice AI** also runs on the device, and it is the one to use for speech.
+RNNoise — the model Jitsi Meet uses for live noise suppression — compiled to
+WebAssembly, 112 KB, processing 480-sample frames at 48 kHz. Measured on real
+speech with white noise added: noise floor 0.0416 → 0.0020 (95% gone) while
+speech stayed at 97%, in about 3 seconds for 11 seconds of audio. No server, no
+upload, works offline.
+
+**Studio** is optional and needs a server: it sends the clip's audio to `denoise/denoise_api.py`, a FastAPI service
 with three backends — `demucs` (Hybrid-Transformer Demucs vocal isolation),
 `dfn` (DeepFilterNet3) and `spectral` (numpy Wiener filter). The editor shows
 whichever backend the service reports and installs the returned audio as the
