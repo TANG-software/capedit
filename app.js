@@ -1653,24 +1653,50 @@ function audioPanel(c) {
     onRange($('#fout'), (v) => (c.fadeOut = v));
     const st = $('#nrStr');
     if (st) st.addEventListener('change', () => pushHistory());
+    denoiseService().then((s) => {
+      const sel = $('#nrMode');
+      if (!sel) return;
+      const opt = sel.querySelector('option[value="studio"]');
+      if (!s.ok) {
+        opt.disabled = true;
+        opt.textContent = 'Studio \u2014 AI model (not on this deployment)';
+      } else {
+        opt.textContent = 'Studio \u2014 AI model (' + bestBackendLabel(s.backends) + ')';
+      }
+    });
     $('#nr').addEventListener('click', async () => {
       const strength = st ? +st.value : 0.8;
+      const mode = $('#nrMode') ? $('#nrMode').value : 'fast';
       pause();
-      showBusy('Removing background noise', 'analysing this clip on the device');
       try {
-        startCrawl(85);
-        const r = await denoiseClip(c, strength, (n) => setBusy(null, n));
-        stopCrawl();
-        setBusy(100, 'done');
-        hideBusy();
-        pushHistory();
-        renderPanel();
-        renderAll();
-        const drop = r.before > 0 ? Math.round((1 - r.after / r.before) * 100) : 0;
-        toast('Noise removed — overall level ' + drop + '% lower');
+        if (mode === 'studio') {
+          showBusy('Studio noise removal', 'separating the voice from the background');
+          startCrawl(92);
+          const clean = await denoiseStudio(c, strength, (p, el) => setBusy(Math.round((p || 0) * 100), 'working\u2026 ' + (el ? el + 's' : '')));
+          stopCrawl();
+          setBusy(100, 'done');
+          installCleanAudio(c, clean);
+          hideBusy();
+          pushHistory();
+          renderPanel();
+          renderAll();
+          toast('Studio noise removal applied');
+        } else {
+          showBusy('Removing background noise', 'analysing this clip on the device');
+          startCrawl(85);
+          const r = await denoiseClip(c, strength, (n) => setBusy(null, n));
+          stopCrawl();
+          setBusy(100, 'done');
+          hideBusy();
+          pushHistory();
+          renderPanel();
+          renderAll();
+          const drop = r.before > 0 ? Math.round((1 - r.after / r.before) * 100) : 0;
+          toast('Noise removed \u2014 overall level ' + drop + '% lower');
+        }
       } catch (e) {
         hideBusy();
-        toast(e && e.message === 'NO_AUDIO' ? 'That clip has no usable audio track' : 'Denoise failed: ' + (e.message || e));
+        toast(e && e.message === 'NO_AUDIO' ? 'That clip has no usable audio track' : 'Noise removal failed: ' + (e.message || e));
       }
     });
     const un = $('#nrUndo');
@@ -1687,13 +1713,17 @@ function audioPanel(c) {
   <label class="row"><span>Volume</span><input id="vol" type="range" min="0" max="2" step="0.01" value="${c.volume}" data-bind="vol"><b>${Math.round(c.volume * 100)}%</b></label>
   <label class="row"><span>Fade in</span><input id="fin" type="range" min="0" max="3" step="0.05" value="${c.fadeIn}" data-bind="fin"><b>${c.fadeIn.toFixed(2)}s</b></label>
   <label class="row"><span>Fade out</span><input id="fout" type="range" min="0" max="3" step="0.05" value="${c.fadeOut}" data-bind="fout"><b>${c.fadeOut.toFixed(2)}s</b></label>
-  <div class="lbl">Noise removal ${cleaned ? '· applied' : ''}</div>
+  <div class="lbl">Noise removal ${cleaned ? '\u00b7 applied' : ''}</div>
   <label class="row"><span>Strength</span><input id="nrStr" type="range" min="0.3" max="1" step="0.05" value="0.8" data-bind="str"><b>0.80</b></label>
+  <select id="nrMode" class="sel">
+    <option value="fast">Fast \u2014 on this device</option>
+    <option value="studio">Studio \u2014 AI model</option>
+  </select>
   <div class="btnrow">
     <button class="btn ${cleaned ? '' : 'primary'}" id="nr">${cleaned ? 'Re-run noise removal' : 'Remove background noise'}</button>
     ${cleaned ? '<button class="btn" id="nrUndo">Undo</button>' : ''}
   </div>
-  <p class="hint">Spectral noise removal: it learns the hiss/room tone of this clip and subtracts it, then writes a cleaned audio track that plays (and exports) with the video. Strength 0.8 is a good start; raise it for a noisy market, lower it if voices sound thin.</p>`;
+  <p class="hint" id="nrHint">Fast mode learns the hiss and room tone of this clip and subtracts it, on the device, in under a second. Studio mode sends the clip's audio to the noise-removal model, which separates the voice from everything else \u2014 slower, and much stronger on traffic, fans and music.</p>`;
 }
 
 /* ------------------------------------------------------------- templates */
@@ -2279,14 +2309,9 @@ function spectralDenoise(x, strength) {
   return out;
 }
 
-async function denoiseClip(clip, strength, onNote) {
-  const { audio } = await audioFromClip(clip, onNote);
-  if (onNote) onNote('estimating the noise floor…');
-  await new Promise((r) => setTimeout(r, 30));
-  const clean = spectralDenoise(audio, strength);
-  const before = rmsOf(audio);
-  const after = rmsOf(clean);
-  const wav = encodeWav(clean, 16000);
+function installCleanAudio(clip, clean, sr) {
+  const rate = sr || 16000;
+  const wav = encodeWav(clean, rate);
   const id = uid();
   media[id] = {
     id,
@@ -2294,7 +2319,7 @@ async function denoiseClip(clip, strength, onNote) {
     name: (clip.name || 'clip') + ' (clean)',
     url: URL.createObjectURL(wav),
     blob: wav,
-    duration: clean.length / 16000,
+    duration: clean.length / rate,
     w: 0,
     h: 0,
   };
@@ -2302,7 +2327,78 @@ async function denoiseClip(clip, strength, onNote) {
   clip.cleanMediaId = id;
   delete clip._nodes;
   if (ac) ensureAudio(clip);
-  return { before, after, id };
+  return id;
+}
+
+async function denoiseClip(clip, strength, onNote) {
+  const { audio } = await audioFromClip(clip, onNote);
+  if (onNote) onNote('estimating the noise floor\u2026');
+  await new Promise((r) => setTimeout(r, 30));
+  const clean = spectralDenoise(audio, strength);
+  const before = rmsOf(audio);
+  const after = rmsOf(clean);
+  installCleanAudio(clip, clean);
+  return { before, after };
+}
+
+/* ------------------------------------------------------- studio noise removal
+   Sends the clip audio to the denoise service (Demucs / DeepFilterNet /
+   spectral), polls the job, and installs whatever comes back. */
+
+const DENOISE = { checked: false, ok: false, backends: null };
+
+async function denoiseService() {
+  if (DENOISE.checked) return DENOISE;
+  DENOISE.checked = true;
+  try {
+    const r = await fetch('api/denoise', { headers: { accept: 'application/json' } });
+    const j = await r.json().catch(() => ({}));
+    DENOISE.ok = r.ok && j && j.ok === true;
+    DENOISE.backends = (j && j.backends) || null;
+  } catch (e) {
+    DENOISE.ok = false;
+  }
+  return DENOISE;
+}
+
+function bestBackendLabel(b) {
+  if (!b) return 'AI model';
+  if (b.demucs) return 'Demucs';
+  if (b.dfn) return 'DeepFilterNet';
+  return 'spectral';
+}
+
+async function denoiseStudio(clip, strength, onProgress) {
+  const { audio } = await audioFromClip(clip, null);
+  const wav = encodeWav(audio, 16000);
+  const fd = new FormData();
+  fd.append('file', new File([wav], 'clip.wav', { type: 'audio/wav' }));
+  fd.append('backend', 'auto');
+  fd.append('strength', String(strength));
+  const r = await fetch('api/denoise', { method: 'POST', body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.job_id) throw new Error(j.error || j.detail || 'could not start the job');
+  const id = j.job_id;
+  let finished = false;
+  for (let i = 0; i < 300; i++) {
+    await wait(1200);
+    let s = {};
+    try {
+      s = await (await fetch('api/denoise/' + id)).json();
+    } catch (e) {}
+    if (s.status === 'failed' || (s.error && s.status !== 'done')) throw new Error(s.error || 'the job failed');
+    if (onProgress) onProgress(s.progress || 0, s.elapsed);
+    if (s.status === 'done') {
+      finished = true;
+      break;
+    }
+  }
+  if (!finished) throw new Error('timed out waiting for the service');
+  const res = await fetch('api/denoise/' + id + '/result');
+  if (!res.ok) throw new Error('could not fetch the cleaned file');
+  const blob = await res.blob();
+  const buf = await decodeBlobAudio(blob);
+  return trimMix16k(buf, 0, buf.duration, 1);
 }
 
 function removeCleanAudio(clip) {

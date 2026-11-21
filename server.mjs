@@ -22,6 +22,13 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 const MAX_UPLOAD = 26 * 1024 * 1024;
 
+/* Render gives a bare hostname for a linked service, so accept both forms. */
+function denoiseBase() {
+  const raw = (process.env.DENOISE_URL || '').trim().replace(/\/$/, '');
+  if (!raw) return '';
+  return /^https?:\/\//.test(raw) ? raw : 'https://' + raw;
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -108,6 +115,34 @@ export function createApp() {
       } catch (e) {
         const msg = e && e.message === 'too large' ? 'audio too large' : 'request failed';
         json(res, { ok: false, error: msg }, e && e.message === 'too large' ? 413 : 400);
+      }
+      return;
+    }
+
+    /* ------------------------------------------------- noise removal proxy
+       The Python service does the work; browsers only ever talk to this server,
+       which is where the service key lives. */
+    if (pathname === '/api/denoise' || pathname.startsWith('/api/denoise/')) {
+      const base = denoiseBase();
+      if (!base) return json(res, { ok: false, error: 'noise removal is not configured on this deployment' }, 503);
+      const sub = pathname.slice('/api/denoise'.length);
+      const target = sub === '' ? (req.method === 'GET' || req.method === 'HEAD' ? base + '/api/health' : base + '/api/jobs') : base + '/api/jobs' + sub;
+      try {
+        const headers = {};
+        if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
+        if (req.headers.accept) headers.accept = req.headers.accept;
+        if (process.env.DENOISE_API_KEY) headers['x-api-key'] = process.env.DENOISE_API_KEY;
+        const body = req.method === 'POST' || req.method === 'PUT' ? await readBody(req) : undefined;
+        const up = await fetch(target, { method: req.method, headers, body });
+        const buf = Buffer.from(await up.arrayBuffer());
+        res.writeHead(up.status, {
+          'content-type': up.headers.get('content-type') || 'application/octet-stream',
+          'content-length': buf.length,
+          'cache-control': 'no-store',
+        });
+        res.end(buf);
+      } catch (e) {
+        json(res, { ok: false, error: 'noise service unreachable' }, 502);
       }
       return;
     }

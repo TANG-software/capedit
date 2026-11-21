@@ -1,6 +1,7 @@
 # Render blueprint — https://render.com/docs/blueprint-spec
-# Deploy: New + > Blueprint > pick this repo. Render creates the service below.
+# New + > Blueprint > pick this repo. Creates both services and links them.
 services:
+  # ---------------------------------------------------------------- the editor
   - type: web
     name: capedit
     runtime: node
@@ -14,9 +15,44 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      # set the real value in the Render dashboard (it will prompt for it)
+      # transcription key — set the real value in the dashboard when prompted
       - key: GROQ_API_KEY
         sync: false
-      # optional: force a provider when more than one key is present
       - key: STT_PROVIDER
         value: groq
+      # how to reach the noise-removal service
+      - key: DENOISE_URL
+        fromService:
+          type: web
+          name: capedit-denoise
+          property: host
+      - key: DENOISE_API_KEY
+        fromService:
+          type: web
+          name: capedit-denoise
+          envVarKey: DENOISE_API_KEY
+
+  # ------------------------------------------------------- noise removal (AI)
+  # Free tier runs the spectral backend (numpy only). For Demucs, uncomment the
+  # torch lines in denoise/requirements.txt and move this service to Standard
+  # (2 GB) — Demucs needs about 1.5-2 GB of RAM.
+  - type: web
+    name: capedit-denoise
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    rootDir: denoise
+    buildCommand: pip install -r requirements.txt
+    startCommand: python denoise_api.py
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DENOISE_API_KEY
+        generateValue: true
+      - key: DENOISE_WORKERS
+        value: "1"
+      - key: DENOISE_MAX_MB
+        value: "24"

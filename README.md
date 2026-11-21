@@ -103,6 +103,26 @@ After **Auto caption**, the left panel lists every line. Each line is a textarea
 fix a misheard word and the word timings for that line are recomputed across its
 original span, so the karaoke highlight keeps up. Click a timestamp to jump there.
 
+## Noise removal
+
+Two modes, in the Audio panel of any video or audio clip.
+
+**Fast** runs in the browser: STFT, per-bin noise floor from the 20th percentile
+over time, spectral subtraction with a residual floor, inverse STFT. Under a
+second for a minute of audio, no network, no model.
+
+**Studio** sends the clip's audio to `denoise/denoise_api.py`, a FastAPI service
+with three backends — `demucs` (Hybrid-Transformer Demucs vocal isolation),
+`dfn` (DeepFilterNet3) and `spectral` (numpy Wiener filter). The editor shows
+whichever backend the service reports and installs the returned audio as the
+clip's new track. On Render the free instance gives you `spectral`; Demucs needs
+torch and about 1.5–2 GB of RAM, so a Standard instance.
+
+Both modes write a cleaned track that plays and exports with the video, and the
+original is one tap away. Note the licence: the Demucs backend uses Meta's
+htdemucs weights (MIT) via torchaudio — check the licence of any model you ship
+commercially.
+
 ## What is built
 
 **Look and finish** — 24 graded looks with an intensity slider (Warm, Golden hour,

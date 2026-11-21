@@ -1,0 +1,11 @@
+# Core service. torch is NOT installed here: the image stays small and the
+# spectral backend always works. To enable the Demucs backend, uncomment the
+# torch lines and move to a 2 GB instance (Demucs needs ~1.5-2 GB of RAM).
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+numpy>=1.26
+soundfile>=0.12
+imageio-ffmpeg>=0.5
+# torch>=2.2
+# torchaudio>=2.2
