@@ -135,6 +135,19 @@ input[type=color]{width:38px;height:32px;background:var(--panel3);border:1px sol
 .min{font-size:11px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mid{font-size:9.5px;color:var(--muted)}
 
+/* ------------------------------------------------- stickers + backdrops */
+.emojigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px}
+.emoji{font-size:21px;line-height:1;padding:5px 0;border-radius:8px;background:var(--panel2);border:1px solid var(--line);text-align:center}
+.emoji:hover{background:var(--accsoft);border-color:var(--acc);transform:scale(1.08)}
+.shapegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:6px}
+.shapebtn{padding:3px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center}
+.shapebtn:hover{border-color:var(--acc);background:var(--accsoft)}
+.bggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:8px}
+.bgsw{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);cursor:pointer}
+.bgsw:hover{outline:2px solid var(--acc);outline-offset:1px}
+.clip.k-sticker{background:linear-gradient(180deg,#ff6fa5,#e0407f);border-color:#c93671}
+.clip.k-background{background:linear-gradient(180deg,#5b6474,#3a4252);border-color:#4a5262}
+
 /* ------------------------------------------------------- templates + library */
 .tplgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .tpl{display:flex;flex-direction:column;gap:4px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:left}

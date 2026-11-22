@@ -132,21 +132,31 @@ commercially.
 
 ## What is built
 
-**Look and finish** — 24 graded looks with an intensity slider (Warm, Golden hour,
+**Stickers** — 80 emoji and 12 vector shapes (star, heart, sparkle, arrow, bubble,
+blob, ring, bolt, crown, flower, check, play) in any colour, with six animations
+(pop in, float, bounce, spin, pulse, still). They behave like any other clip:
+drag, resize, rotate, layer over video.
+
+**Backdrops** — 24 full-frame backgrounds: 12 gradients, 8 animated patterns
+(dots, stripes, grid, waves, confetti, rings, zigzag, checker) and 4 solids. They
+paint behind everything and loop on their own.
+
+**Look and finish** — 38 graded looks with an intensity slider (Warm, Golden hour,
 Sunset, Cool, Teal & orange, Night, B&W, Noir, Mono, Vivid, Punch, Fade, Matte,
 Vintage, Retro, Film, Cinematic, Drama, Dream, Soft, Crisp, Sepia, Neon), plus
 per-clip brightness, contrast, saturation and hue.
 
-**Titles** — 10 title presets (bold white, lower third, caption bar, mint
+**Titles** — 20 title presets (bold white, lower third, caption bar, mint
 highlight, news strap, cinema title, typewriter, neon glow, big impact, minimal)
 and 15 animations (fade, slide up/down/left/right, pop, scale in, rotate in,
 typewriter, word by word, bounce, wave, blur in, glow).
 
-**Compositing** — 9 blend modes and 8 entry transitions (dissolve, wipe right,
+**Compositing** — 9 blend modes and 16 entry transitions (dissolve, wipe right,
 wipe up, slide up, zoom, blur, flash) with a one-tap overlap helper.
 
-**Templates** — 6 one-tap project templates: YouTube video, Instagram Reel,
-Wedding highlight, Product promo, News explainer, Podcast clip. Each sets the
+**Templates** — 14 one-tap project templates: YouTube video, Instagram Reel,
+Wedding highlight, Product promo, News explainer, Podcast clip, Recipe, Gym,
+Travel vlog, Study, Festival post, Shop ad, Quote reel, Breaking news. Each sets the
 aspect ratio, a look on every clip, the caption style and a matching title.
 
 **Captions** — 6 caption presets on top of the editable word-level transcript.

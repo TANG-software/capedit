@@ -69,6 +69,156 @@ const TEXT_ANIMS = [
   ['glow', 'Glow'],
 ];
 
+/* --------------------------------------------------------------- stickers */
+
+const EMOJIS = ['😀','😄','😂','🥹','😍','🥳','😎','🤩','😭','😱','🤔','😴','🙌','👏','👍','👎','✌️','🤞','💪','🙏','👀','🧠','🔥','✨','⭐','🌟','💫','⚡','💥','💯','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💖','💘','💝','🎉','🎊','🎁','🏆','🥇','🎯','🎬','📸','🎵','🎧','🎤','📢','💬','💭','✅','❌','❗','❓','💡','🚀','🌈','☀️','🌙','☁️','🌊','🍕','☕','🍦','🐶','🐱','🦄','🌸','🌻','🍀','🇮🇳','🪔','🥁','🕺','💃'];
+
+const STICKER_SHAPES = ['star', 'heart', 'sparkle', 'arrow', 'bubble', 'blob', 'ring', 'bolt', 'crown', 'flower', 'check', 'play'];
+
+/* every shape is drawn centred on 0,0 inside a box of size s */
+function stickerPath(ctx, shape, s, color) {
+  const r = s / 2;
+  ctx.save();
+  ctx.fillStyle = color || '#ffd166';
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+  ctx.lineWidth = Math.max(1.5, s * 0.02);
+  ctx.lineJoin = 'round';
+  const star = (n, outer, inner) => {
+    ctx.beginPath();
+    for (let i = 0; i < n * 2; i++) {
+      const rad = i % 2 ? inner : outer;
+      const ang = (Math.PI / n) * i - Math.PI / 2;
+      const x = Math.cos(ang) * rad,
+        y = Math.sin(ang) * rad;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  };
+  if (shape === 'star') star(5, r, r * 0.45);
+  else if (shape === 'sparkle') star(4, r, r * 0.28);
+  else if (shape === 'heart') {
+    ctx.beginPath();
+    ctx.moveTo(0, r * 0.75);
+    ctx.bezierCurveTo(-r * 1.4, -r * 0.15, -r * 0.5, -r * 0.95, 0, -r * 0.35);
+    ctx.bezierCurveTo(r * 0.5, -r * 0.95, r * 1.4, -r * 0.15, 0, r * 0.75);
+    ctx.closePath();
+  } else if (shape === 'arrow') {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.9, -r * 0.28);
+    ctx.lineTo(r * 0.1, -r * 0.28);
+    ctx.lineTo(r * 0.1, -r * 0.62);
+    ctx.lineTo(r, 0);
+    ctx.lineTo(r * 0.1, r * 0.62);
+    ctx.lineTo(r * 0.1, r * 0.28);
+    ctx.lineTo(-r * 0.9, r * 0.28);
+    ctx.closePath();
+  } else if (shape === 'bubble') {
+    const w = r * 1.9, h = r * 1.35;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(-w / 2, -h / 2 - r * 0.1, w, h, r * 0.35) : ctx.rect(-w / 2, -h / 2 - r * 0.1, w, h);
+    ctx.moveTo(-w * 0.15, h / 2 - r * 0.1);
+    ctx.lineTo(-w * 0.05, h / 2 + r * 0.45);
+    ctx.lineTo(w * 0.15, h / 2 - r * 0.1);
+  } else if (shape === 'blob') {
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const ang = (Math.PI * 2 * i) / 40;
+      const rad = r * (0.82 + 0.18 * Math.sin(ang * 3 + 0.6) + 0.06 * Math.cos(ang * 5));
+      const x = Math.cos(ang) * rad,
+        y = Math.sin(ang) * rad;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  } else if (shape === 'ring') {
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2);
+    ctx.arc(0, 0, r * 0.48, 0, Math.PI * 2, true);
+  } else if (shape === 'bolt') {
+    ctx.beginPath();
+    ctx.moveTo(r * 0.15, -r);
+    ctx.lineTo(-r * 0.5, r * 0.12);
+    ctx.lineTo(-r * 0.02, r * 0.12);
+    ctx.lineTo(-r * 0.2, r);
+    ctx.lineTo(r * 0.55, -r * 0.12);
+    ctx.lineTo(r * 0.05, -r * 0.12);
+    ctx.closePath();
+  } else if (shape === 'crown') {
+    ctx.beginPath();
+    ctx.moveTo(-r, r * 0.5);
+    ctx.lineTo(-r, -r * 0.5);
+    ctx.lineTo(-r * 0.45, -r * 0.05);
+    ctx.lineTo(0, -r * 0.72);
+    ctx.lineTo(r * 0.45, -r * 0.05);
+    ctx.lineTo(r, -r * 0.5);
+    ctx.lineTo(r, r * 0.5);
+    ctx.closePath();
+  } else if (shape === 'flower') {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const ang = (Math.PI / 3) * i;
+      ctx.ellipse(Math.cos(ang) * r * 0.52, Math.sin(ang) * r * 0.52, r * 0.42, r * 0.42, 0, 0, Math.PI * 2);
+    }
+  } else if (shape === 'check') {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.7, 0);
+    ctx.lineTo(-r * 0.15, r * 0.55);
+    ctx.lineTo(r * 0.75, -r * 0.6);
+    ctx.lineWidth = s * 0.16;
+    ctx.strokeStyle = color || '#2ee6a8';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+    return;
+  } else if (shape === 'play') {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.5, -r * 0.8);
+    ctx.lineTo(r * 0.8, 0);
+    ctx.lineTo(-r * 0.5, r * 0.8);
+    ctx.closePath();
+  }
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------ backgrounds */
+
+const BACKGROUNDS = [
+  { id: 'g-sunset', n: 'Sunset', type: 'linear', a: '#ff9a3c', b: '#c2185b', angle: 135 },
+  { id: 'g-ocean', n: 'Ocean', type: 'linear', a: '#2e6bff', b: '#0a1a3c', angle: 160 },
+  { id: 'g-mint', n: 'Mint', type: 'linear', a: '#2ee6a8', b: '#0b6b52', angle: 135 },
+  { id: 'g-violet', n: 'Violet', type: 'linear', a: '#8f6bff', b: '#241a4d', angle: 150 },
+  { id: 'g-peach', n: 'Peach', type: 'linear', a: '#ffd9b0', b: '#ff8a80', angle: 120 },
+  { id: 'g-slate', n: 'Slate', type: 'linear', a: '#3a4252', b: '#12151c', angle: 160 },
+  { id: 'g-rose', n: 'Rose', type: 'linear', a: '#ff6fa5', b: '#6a1b4d', angle: 140 },
+  { id: 'g-lime', n: 'Lime', type: 'linear', a: '#d6ff5e', b: '#2f6b1f', angle: 130 },
+  { id: 'g-sky', n: 'Sky', type: 'linear', a: '#a5e6ff', b: '#2b6cff', angle: 150 },
+  { id: 'g-coal', n: 'Coal', type: 'linear', a: '#20242e', b: '#05060a', angle: 160 },
+  { id: 'g-saffron', n: 'Saffron', type: 'linear', a: '#ffb347', b: '#1f7a3f', angle: 140 },
+  { id: 'g-mono', n: 'Mono', type: 'linear', a: '#f2f2f2', b: '#8b8b8b', angle: 140 },
+  { id: 's-ink', n: 'Ink', type: 'solid', a: '#0e0f13' },
+  { id: 's-white', n: 'White', type: 'solid', a: '#ffffff' },
+  { id: 's-cream', n: 'Cream', type: 'solid', a: '#f3ead6' },
+  { id: 's-black', n: 'Black', type: 'solid', a: '#000000' },
+  { id: 'p-dots', n: 'Dots', type: 'pattern', pattern: 'dots', a: '#12141a', b: '#2ee6a8' },
+  { id: 'p-stripes', n: 'Stripes', type: 'pattern', pattern: 'stripes', a: '#1b1030', b: '#7c5cff' },
+  { id: 'p-grid', n: 'Grid', type: 'pattern', pattern: 'grid', a: '#0d1117', b: '#243447' },
+  { id: 'p-waves', n: 'Waves', type: 'pattern', pattern: 'waves', a: '#0a1a2f', b: '#2e6bff' },
+  { id: 'p-confetti', n: 'Confetti', type: 'pattern', pattern: 'confetti', a: '#1a1030', b: '#ff6fa5' },
+  { id: 'p-rings', n: 'Rings', type: 'pattern', pattern: 'rings', a: '#120f1c', b: '#8f6bff' },
+  { id: 'p-zig', n: 'Zigzag', type: 'pattern', pattern: 'zigzag', a: '#141018', b: '#ffb347' },
+  { id: 'p-checker', n: 'Checker', type: 'pattern', pattern: 'checker', a: '#101216', b: '#232a35' },
+];
+
+const STICKER_ANIMS = [
+  ['pop', 'Pop in'],
+  ['float', 'Float'],
+  ['bounce', 'Bounce'],
+  ['spin', 'Spin'],
+  ['pulse', 'Pulse'],
+  ['none', 'Still'],
+];
+
 const FONTS = {
   sans: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   serif: 'Georgia, "Times New Roman", serif',
@@ -420,7 +570,7 @@ function filterStr(clip) {
 
 /* entry transition: works when the clip overlaps the one before it */
 function transitionState(clip, time, W, H) {
-  const st = { alpha: 1, dx: 0, dy: 0, scale: 1, blur: 0, clipRect: null };
+  const st = { alpha: 1, dx: 0, dy: 0, scale: 1, blur: 0, clipRect: null, circle: 0, rotate: 0 };
   const tr = clip.transIn;
   if (!tr || !tr.type || tr.type === 'none') return st;
   const d = Math.max(0.08, tr.dur || 0.6);
@@ -431,8 +581,24 @@ function transitionState(clip, time, W, H) {
   else if (tr.type === 'slideUp') {
     st.dy = (1 - e) * H;
     st.alpha = Math.min(1, e * 1.6);
+  } else if (tr.type === 'slideLeft') {
+    st.dx = (1 - e) * W;
+  } else if (tr.type === 'slideRight') {
+    st.dx = -(1 - e) * W;
+  } else if (tr.type === 'drop') {
+    st.dy = -(1 - e) * H * 0.6;
+    st.alpha = e;
+  } else if (tr.type === 'spin') {
+    st.rotate = (1 - e) * 90;
+    st.scale = 0.7 + 0.3 * e;
+    st.alpha = e;
+  } else if (tr.type === 'circle') {
+    st.circle = e;
   } else if (tr.type === 'zoom') {
     st.scale = 1.25 - 0.25 * e;
+    st.alpha = e;
+  } else if (tr.type === 'zoomOut') {
+    st.scale = 0.7 + 0.3 * e;
     st.alpha = e;
   } else if (tr.type === 'blur') {
     st.blur = (1 - e) * 18;
@@ -441,6 +607,8 @@ function transitionState(clip, time, W, H) {
     st.clipRect = [0, 0, W * e, H];
   } else if (tr.type === 'wipeUp') {
     st.clipRect = [0, H - H * e, W, H * e];
+  } else if (tr.type === 'split') {
+    st.clipRect = [0, 0, W * e, H];
   }
   return st;
 }
@@ -470,7 +638,11 @@ function drawVisual(clip, time) {
   const cover = Math.max(W / sw, H / sh) * clip.scale * tr.scale;
 
   ctx.save();
-  if (tr.clipRect) {
+  if (tr.circle) {
+    ctx.beginPath();
+    ctx.arc(W / 2, H / 2, (Math.max(W, H) * 0.75) * tr.circle, 0, Math.PI * 2);
+    ctx.clip();
+  } else if (tr.clipRect) {
     ctx.beginPath();
     ctx.rect(tr.clipRect[0], tr.clipRect[1], tr.clipRect[2], tr.clipRect[3]);
     ctx.clip();
@@ -479,7 +651,7 @@ function drawVisual(clip, time) {
   ctx.globalCompositeOperation = clip.blend && clip.blend !== 'source-over' ? clip.blend : 'source-over';
   ctx.filter = tr.blur ? `blur(${tr.blur.toFixed(1)}px) ${filterStr(clip)}` : filterStr(clip);
   ctx.translate(W / 2 + clip.x * W + tr.dx, H / 2 + clip.y * H + tr.dy);
-  if (clip.rotate) ctx.rotate((clip.rotate * Math.PI) / 180);
+  if (clip.rotate || tr.rotate) ctx.rotate(((clip.rotate + (tr.rotate || 0)) * Math.PI) / 180);
   if (clip.flipH) ctx.scale(-1, 1);
   try {
     ctx.drawImage(el, (-sw * cover) / 2, (-sh * cover) / 2, sw * cover, sh * cover);
@@ -489,6 +661,167 @@ function drawVisual(clip, time) {
   ctx.restore();
   ctx.globalCompositeOperation = 'source-over';
   ctx.filter = 'none';
+}
+
+function drawStickerClip(clip, time) {
+  const W = canvas.width,
+    H = canvas.height;
+  const st = clip.sticker || {};
+  const size = (st.size || 220) * (W / 1080);
+  const p = clipProgress(clip, time);
+  const unit = W / 1080;
+  let alpha = clip.opacity * fadeAlpha(clip, time);
+  let sc = 1;
+  let dy = 0;
+  let rot = 0;
+  const anim = st.anim || 'pop';
+  if (anim === 'pop') {
+    const k = Math.min(1, p / 0.22);
+    sc = 0.6 + 0.4 * (1 - Math.pow(1 - k, 3));
+    alpha *= k;
+  } else if (anim === 'float') {
+    dy = Math.sin(time * 2.4) * 10 * unit;
+  } else if (anim === 'bounce') {
+    dy = -Math.abs(Math.sin(time * 3)) * 22 * unit;
+  } else if (anim === 'spin') {
+    rot = time * 1.1;
+  } else if (anim === 'pulse') {
+    sc = 1 + 0.07 * Math.sin(time * 4.2);
+  }
+  if (alpha <= 0.01) return;
+  ctx.save();
+  ctx.globalAlpha = clamp(alpha, 0, 1);
+  ctx.translate(W / 2 + clip.x * W, H / 2 + clip.y * H + dy);
+  ctx.rotate((clip.rotate * Math.PI) / 180 + rot);
+  ctx.scale(clip.scale * sc, clip.scale * sc);
+  if (st.type === 'emoji') {
+    ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(st.value || '⭐', 0, 0);
+  } else {
+    stickerPath(ctx, st.value || 'star', size, st.color || '#ffd166');
+  }
+  ctx.restore();
+}
+
+function drawBackgroundClip(clip, time) {
+  const W = canvas.width,
+    H = canvas.height;
+  const bg = clip.bg || {};
+  ctx.save();
+  ctx.globalAlpha = clamp(clip.opacity * fadeAlpha(clip, time), 0, 1);
+  if (bg.type === 'solid') {
+    ctx.fillStyle = bg.a || '#000';
+    ctx.fillRect(0, 0, W, H);
+  } else if (bg.type === 'linear') {
+    const ang = ((bg.angle == null ? 135 : bg.angle) * Math.PI) / 180;
+    const dx = Math.cos(ang) * W * 0.5,
+      dy = Math.sin(ang) * H * 0.5;
+    const g = ctx.createLinearGradient(W / 2 - dx, H / 2 - dy, W / 2 + dx, H / 2 + dy);
+    g.addColorStop(0, bg.a || '#000');
+    g.addColorStop(1, bg.b || '#111');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  } else if (bg.type === 'pattern') {
+    ctx.fillStyle = bg.a || '#111';
+    ctx.fillRect(0, 0, W, H);
+    const col = bg.b || '#2ee6a8';
+    const u = W / 1080;
+    const t = time;
+    ctx.fillStyle = col;
+    ctx.strokeStyle = col;
+    if (bg.pattern === 'dots') {
+      const step = 90 * u;
+      const off = (t * 18 * u) % step;
+      for (let y = -step; y < H + step; y += step)
+        for (let x = -step; x < W + step; x += step) {
+          ctx.beginPath();
+          ctx.arc(x + off, y, 7 * u, 0, Math.PI * 2);
+          ctx.fill();
+        }
+    } else if (bg.pattern === 'stripes') {
+      const step = 70 * u;
+      const off = (t * 24 * u) % step;
+      ctx.lineWidth = 26 * u;
+      for (let x = -step * 2; x < W + step * 2; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x + off, 0);
+        ctx.lineTo(x + off - H * 0.35, H);
+        ctx.stroke();
+      }
+    } else if (bg.pattern === 'grid') {
+      ctx.lineWidth = 2 * u;
+      const step = 72 * u;
+      for (let x = 0; x <= W; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= H; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+    } else if (bg.pattern === 'waves') {
+      for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        const amp = 40 * u,
+          yb = (H / 6) * i + 40 * u;
+        for (let x = 0; x <= W; x += 8 * u) {
+          const y = yb + Math.sin(x / (120 * u) + t * 1.6 + i) * amp;
+          x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.lineWidth = 6 * u;
+        ctx.stroke();
+      }
+    } else if (bg.pattern === 'confetti') {
+      const cols = ['#ff6fa5', '#ffd166', '#2ee6a8', '#7c5cff', '#4aa3ff'];
+      for (let i = 0; i < 70; i++) {
+        const seed = i * 12.9898;
+        const rx = Math.abs(Math.sin(seed)) % 1,
+          ry = Math.abs(Math.cos(seed * 1.7)) % 1;
+        const y = (ry * H + t * 40 * u * (0.5 + (i % 5) / 5)) % H;
+        ctx.fillStyle = cols[i % cols.length];
+        ctx.save();
+        ctx.translate(rx * W, y);
+        ctx.rotate(t + i);
+        ctx.fillRect(-5 * u, -9 * u, 10 * u, 18 * u);
+        ctx.restore();
+      }
+    } else if (bg.pattern === 'rings') {
+      const cx = W / 2,
+        cy = H / 2;
+      for (let i = 0; i < 8; i++) {
+        const rad = ((i * 120 * u + t * 30 * u) % (W * 0.9)) + 40 * u;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.lineWidth = 4 * u;
+        ctx.stroke();
+      }
+    } else if (bg.pattern === 'zigzag') {
+      ctx.lineWidth = 8 * u;
+      const step = 60 * u;
+      for (let y = -step; y < H + step * 2; y += step * 1.6) {
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += step) {
+          const yy = y + (Math.floor(x / step) % 2 ? step * 0.5 : 0);
+          x ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy);
+        }
+        ctx.stroke();
+      }
+    } else if (bg.pattern === 'checker') {
+      const step = 90 * u;
+      for (let y = 0, j = 0; y < H; y += step, j++)
+        for (let x = 0, i = 0; x < W; x += step, i++) {
+          if ((i + j) % 2) continue;
+          ctx.fillRect(x, y, step, step);
+        }
+    }
+  }
+  ctx.restore();
 }
 
 function wrapLines(text, maxW) {
@@ -649,12 +982,15 @@ function renderFrame(time) {
   const active = state.clips
     .filter((c) => time >= c.start - 1e-6 && time < c.start + c.dur)
     .sort((a, b) => order.indexOf(a.trackId) - order.indexOf(b.trackId) || a.start - b.start);
+  // backgrounds always paint first, whatever track they sit on
+  for (const c of active) if (c.kind === 'background') drawBackgroundClip(c, time);
   for (const c of active) {
-    if (c.kind === 'text') {
+    if (c.kind === 'background') continue;
+    if (c.kind === 'sticker') drawStickerClip(c, time);
+    else if (c.kind === 'text') {
       if (c.caption && c.words && c.words.length) drawCaptionClip(c, time);
       else drawText(c, time);
-    }
-    else if (c.kind === 'video' || c.kind === 'image') drawVisual(c, time);
+    } else if (c.kind === 'video' || c.kind === 'image') drawVisual(c, time);
   }
   if (!active.length) {
     ctx.fillStyle = 'rgba(255,255,255,0.28)';
@@ -690,7 +1026,7 @@ function driveElement(c, el, time, isPlaying, inRange, target) {
 
 function syncElements(time, isPlaying) {
   for (const c of state.clips) {
-    if (c.kind === 'text' || c.kind === 'image') continue;
+    if (c.kind === 'text' || c.kind === 'image' || c.kind === 'sticker' || c.kind === 'background') continue;
     const vel = elFor(c);
     const ael = audioSourceEl(c);
     if (!vel && !ael) continue;
@@ -918,7 +1254,9 @@ function renderTimeline() {
       const label = c.kind === 'text' ? (c.text && c.text.str) || 'Text' : c.name || c.kind;
       el.innerHTML =
         `<div class="clipIn">` +
-        (c.kind === 'text' ? `<span class="ci">T</span>` : `<span class="ci">${c.kind === 'video' ? '▶' : c.kind === 'audio' ? '♪' : '▣'}</span>`) +
+        `<span class="ci">${
+          c.kind === 'text' ? 'T' : c.kind === 'sticker' ? '★' : c.kind === 'background' ? '▦' : c.kind === 'video' ? '▶' : c.kind === 'audio' ? '♪' : '▣'
+        }</span>` +
         `<span class="cname">${escapeHtml(String(label).slice(0, 26))}</span>` +
         `<span class="cdur">${c.dur.toFixed(1)}s</span>` +
         `</div><div class="h l"></div><div class="h r"></div>`;
@@ -1075,7 +1413,7 @@ function splitAtPlayhead() {
 
 const TABS = ['media', 'text', 'captions', 'filters', 'adjust', 'speed', 'audio'];
 
-const LEFT_TABS = ['media', 'templates', 'captions'];
+const LEFT_TABS = ['media', 'templates', 'stickers', 'backgrounds', 'captions'];
 let leftTab = 'media';
 let rightTab = 'text';
 
@@ -1103,6 +1441,8 @@ function setTab(id) {
 function panelHTML(tab, c) {
   if (tab === 'media') return mediaPanel();
   if (tab === 'templates') return templatesPanel();
+  if (tab === 'stickers') return stickersPanel();
+  if (tab === 'backgrounds') return backgroundsPanel();
   if (tab === 'captions') return captionsPanel();
   if (tab === 'text') return textPanel(c);
   if (tab === 'filters') return filtersPanel(c);
@@ -1739,6 +2079,145 @@ function audioPanel(c) {
   <p class="hint" id="nrHint">Fast mode learns the hiss and room tone of this clip and subtracts it, on the device, in under a second. Studio mode sends the clip's audio to the noise-removal model, which separates the voice from everything else \u2014 slower, and much stronger on traffic, fans and music.</p>`;
 }
 
+/* ------------------------------------------------------- stickers & backgrounds */
+
+function addStickerClip(type, value, color) {
+  const c = {
+    id: uid(),
+    trackId: 'T1',
+    kind: 'sticker',
+    mediaId: null,
+    name: type === 'emoji' ? value : 'Sticker',
+    start: t,
+    dur: 3,
+    inPoint: 0,
+    speed: 1,
+    volume: 1,
+    fadeIn: 0,
+    fadeOut: 0,
+    filter: 'none',
+    adj: { b: 1, c: 1, s: 1, h: 0 },
+    x: 0,
+    y: 0,
+    scale: 1,
+    rotate: 0,
+    opacity: 1,
+    flipH: false,
+    noise: false,
+    sticker: { type, value, color: color || '#ffd166', size: 240, anim: 'pop' },
+    text: { str: '', size: 64, color: '#fff', font: 'sans', bg: 'none', stroke: true, anim: 'none' },
+  };
+  state.clips.push(c);
+  selectedId = c.id;
+  pushHistory();
+  renderAll();
+  setTab('adjust');
+  return c;
+}
+
+function addBackgroundClip(bgId) {
+  const bg = BACKGROUNDS.find((b) => b.id === bgId);
+  if (!bg) return;
+  const c = {
+    id: uid(),
+    trackId: 'V1',
+    kind: 'background',
+    mediaId: null,
+    name: bg.n,
+    start: 0,
+    dur: Math.max(4, projectDuration() || 4),
+    inPoint: 0,
+    speed: 1,
+    volume: 1,
+    fadeIn: 0,
+    fadeOut: 0,
+    filter: 'none',
+    adj: { b: 1, c: 1, s: 1, h: 0 },
+    x: 0,
+    y: 0,
+    scale: 1,
+    rotate: 0,
+    opacity: 1,
+    flipH: false,
+    noise: false,
+    bg: { type: bg.type, pattern: bg.pattern, a: bg.a, b: bg.b, angle: bg.angle },
+    text: { str: '', size: 64, color: '#fff', font: 'sans', bg: 'none', stroke: true, anim: 'none' },
+  };
+  state.clips.push(c);
+  selectedId = c.id;
+  pushHistory();
+  renderAll();
+  toast(bg.n + ' background added');
+  return c;
+}
+
+function stickersPanel() {
+  setTimeout(() => {
+    if (!$('[data-emoji]')) return;
+    $$('[data-emoji]').forEach((b) => b.addEventListener('click', () => addStickerClip('emoji', b.dataset.emoji)));
+    $$('[data-shape]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const col = $('#stkColor') ? $('#stkColor').value : '#ffd166';
+        const anim = $('#stkAnim') ? $('#stkAnim').value : 'pop';
+        const c = addStickerClip('shape', b.dataset.shape, col);
+        if (c) c.sticker.anim = anim;
+      })
+    );
+    const cv = $$('.shapeprev');
+    cv.forEach((el) => {
+      const g = el.getContext('2d');
+      g.clearRect(0, 0, el.width, el.height);
+      g.translate(el.width / 2, el.height / 2);
+      stickerPath(g, el.dataset.shape, el.width * 0.72, '#ffd166');
+    });
+  });
+  return `<p class="hint">Tap a sticker to drop it at the playhead. Drag it on the preview, resize and animate it in Adjust.</p>
+  <div class="lbl">Emoji · ${EMOJIS.length}</div>
+  <div class="emojigrid">${EMOJIS.map((e) => `<button class="emoji" data-emoji="${e}" title="${e}">${e}</button>`).join('')}</div>
+  <div class="lbl">Shapes · ${STICKER_SHAPES.length}</div>
+  <div class="shapegrid">${STICKER_SHAPES.map(
+    (s) => `<button class="shapebtn" data-shape="${s}" title="${s}"><canvas class="shapeprev" data-shape="${s}" width="46" height="46"></canvas></button>`
+  ).join('')}</div>
+  <div class="row2"><input type="color" id="stkColor" value="#ffd166" title="Shape colour">
+    <select id="stkAnim" class="sel">${STICKER_ANIMS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select>
+  </div>`;
+}
+
+function backgroundsPanel() {
+  setTimeout(() => {
+    if (!$('[data-bgid]')) return;
+    $$('[data-bgid]').forEach((b) => b.addEventListener('click', () => addBackgroundClip(b.dataset.bgid)));
+  });
+  const swatch = (bg) => {
+    if (bg.type === 'solid') return `background:${bg.a}`;
+    if (bg.type === 'linear') return `background:linear-gradient(${bg.angle || 135}deg, ${bg.a}, ${bg.b})`;
+    const pat = {
+      dots: 'radial-gradient(circle at 6px 6px, ' + bg.b + ' 2.4px, transparent 2.6px) 0 0/16px 16px',
+      stripes: 'repeating-linear-gradient(45deg, ' + bg.b + ' 0 5px, transparent 5px 12px)',
+      grid: 'linear-gradient(' + bg.b + ' 1px, transparent 1px) 0 0/14px 14px, linear-gradient(90deg, ' + bg.b + ' 1px, transparent 1px) 0 0/14px 14px',
+      waves: 'repeating-radial-gradient(circle at 50% 120%, transparent 0 10px, ' + bg.b + ' 10px 12px)',
+      confetti: 'radial-gradient(' + bg.b + ' 2px, transparent 2.2px) 0 0/18px 18px, radial-gradient(' + bg.b + ' 1.6px, transparent 1.8px) 9px 9px/18px 18px',
+      rings: 'repeating-radial-gradient(circle at 50% 50%, transparent 0 8px, ' + bg.b + ' 8px 9px)',
+      zigzag: 'repeating-linear-gradient(135deg, ' + bg.b + ' 0 4px, transparent 4px 10px)',
+      checker: 'conic-gradient(' + bg.b + ' 90deg, transparent 90deg 180deg, ' + bg.b + ' 180deg 270deg, transparent 270deg) 0 0/16px 16px',
+    }[bg.pattern] || '';
+    return 'background:' + bg.a + ';background-image:' + pat;
+  };
+  return `<p class="hint">Backgrounds sit behind every clip and animate on their own. Pick one and it spans the project.</p>
+  <div class="lbl">Gradients</div>
+  <div class="bggrid">${BACKGROUNDS.filter((b) => b.type === 'linear')
+    .map((b) => `<button class="bgsw" data-bgid="${b.id}" style="${swatch(b)}" title="${b.n}"></button>`)
+    .join('')}</div>
+  <div class="lbl">Patterns</div>
+  <div class="bggrid">${BACKGROUNDS.filter((b) => b.type === 'pattern')
+    .map((b) => `<button class="bgsw" data-bgid="${b.id}" style="${swatch(b)}" title="${b.n}"></button>`)
+    .join('')}</div>
+  <div class="lbl">Solid</div>
+  <div class="bggrid">${BACKGROUNDS.filter((b) => b.type === 'solid')
+    .map((b) => `<button class="bgsw" data-bgid="${b.id}" style="${swatch(b)}" title="${b.n}"></button>`)
+    .join('')}</div>`;
+}
+
 /* ------------------------------------------------------------- templates */
 
 const TEMPLATES = [
@@ -1749,6 +2228,60 @@ const TEMPLATES = [
   { id: 'news', n: 'News explainer', d: '16:9 · cinematic · red strap', aspect: '16:9', look: 'cinematic', title: 4, cap: 1 },
   { id: 'podcast', n: 'Podcast clip', d: '9:16 · film · boxed captions', aspect: '9:16', look: 'film', title: 1, cap: 2 },
 ];
+
+/* ---------------------------------------------------- extended preset library */
+
+Object.assign(LOOKS, {
+  tealorange: { n: 'Teal & orange', c: 1.18, s: 1.24, h: 6 },
+  bollywood: { n: 'Bollywood', b: 1.06, c: 1.12, s: 1.35, h: -6, sep: 0.06 },
+  monsoon: { n: 'Monsoon', b: 0.96, c: 1.1, s: 0.85, h: 12 },
+  haldi: { n: 'Haldi', b: 1.1, c: 1.04, s: 1.3, h: -12, sep: 0.16 },
+  indigo: { n: 'Indigo', b: 0.98, c: 1.12, s: 1.05, h: 28 },
+  kerala: { n: 'Kerala', b: 1.04, c: 1.02, s: 1.18, h: 10 },
+  desert: { n: 'Desert', b: 1.08, c: 1.0, s: 1.12, h: -16, sep: 0.22 },
+  pastel: { n: 'Pastel', b: 1.12, c: 0.88, s: 0.92 },
+  cyber: { n: 'Cyber', c: 1.2, s: 1.4, h: -30 },
+  infrared: { n: 'Infrared', c: 1.25, s: 1.5, h: 150 },
+  washed: { n: 'Washed', b: 1.14, c: 0.82, s: 0.8, sep: 0.1 },
+  kodak: { n: 'Kodak', b: 1.04, c: 1.06, s: 1.12, sep: 0.14 },
+  fuji: { n: 'Fuji', b: 1.02, c: 1.08, s: 1.08, h: 8 },
+  bleach: { n: 'Bleach', b: 1.1, c: 1.3, s: 0.6 },
+});
+
+Object.assign(TRANSITIONS, {
+  slideLeft: 'Slide left',
+  slideRight: 'Slide right',
+  spin: 'Spin in',
+  circle: 'Circle open',
+  zoomOut: 'Zoom out',
+  drop: 'Drop in',
+  fadeBlack: 'Fade from black',
+  split: 'Split open',
+});
+
+TITLE_PRESETS.push(
+  { n: 'Gradient fill', t: { size: 84, color: '#ffd166', font: 'sans', bg: 'none', stroke: true, anim: 'scaleIn' }, y: -0.1 },
+  { n: 'Outline only', t: { size: 92, color: '#ffffff', font: 'impact', bg: 'none', stroke: false, anim: 'fade' }, y: 0 },
+  { n: 'Highlight bar', t: { size: 56, color: '#04120d', font: 'sans', bg: '#ffd400', stroke: false, anim: 'slideLeft' }, y: 0.18 },
+  { n: 'Quote card', t: { size: 48, color: '#ffffff', font: 'serif', bg: 'rgba(0,0,0,0.72)', stroke: false, anim: 'blurIn' }, y: 0 },
+  { n: 'Reel hook', t: { size: 72, color: '#ffffff', font: 'impact', bg: 'none', stroke: true, anim: 'bounce' }, y: -0.26 },
+  { n: 'Lower caption', t: { size: 42, color: '#ffffff', font: 'sans', bg: 'rgba(0,0,0,0.55)', stroke: false, anim: 'wordIn' }, y: 0.34 },
+  { n: 'Shayari', t: { size: 52, color: '#ffe9c7', font: 'serif', bg: 'none', stroke: true, anim: 'type' }, y: 0 },
+  { n: 'Price tag', t: { size: 64, color: '#ffffff', font: 'impact', bg: '#e5484d', stroke: false, anim: 'pop' }, y: 0.24 },
+  { n: 'Chapter', t: { size: 46, color: '#ffffff', font: 'mono', bg: 'none', stroke: false, anim: 'fade' }, y: -0.3 },
+  { n: 'Sticker label', t: { size: 54, color: '#04120d', font: 'sans', bg: '#2ee6a8', stroke: false, anim: 'rotateIn' }, y: 0.3 }
+);
+
+TEMPLATES.push(
+  { id: 'recipe', n: 'Recipe / food', d: '9:16 · warm · chunky titles', aspect: '9:16', look: 'haldi', title: 10, cap: 1 },
+  { id: 'gym', n: 'Gym / fitness', d: '9:16 · punch · big impact', aspect: '9:16', look: 'punch', title: 8, cap: 3 },
+  { id: 'travel', n: 'Travel vlog', d: '16:9 · kodak · lower thirds', aspect: '16:9', look: 'kodak', title: 1, cap: 0 },
+  { id: 'study', n: 'Study / lecture', d: '16:9 · crisp · clean captions', aspect: '16:9', look: 'crisp', title: 2, cap: 0 },
+  { id: 'festival', n: 'Festival post', d: '1:1 · bollywood · gold title', aspect: '1:1', look: 'bollywood', title: 10, cap: 3 },
+  { id: 'shop', n: 'Shop / product ad', d: '4:5 · vivid · price tag', aspect: '4:5', look: 'vivid', title: 17, cap: 1 },
+  { id: 'quote', n: 'Quote reel', d: '9:16 · fade · serif quote', aspect: '9:16', look: 'fade', title: 13, cap: 5 },
+  { id: 'news2', n: 'Breaking news', d: '16:9 · drama · red strap', aspect: '16:9', look: 'drama', title: 4, cap: 1 }
+);
 
 function applyTemplate(id) {
   const tp = TEMPLATES.find((x) => x.id === id);
